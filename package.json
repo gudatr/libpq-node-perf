@@ -1,23 +1,23 @@
 {
   "name": "libpq-node-perf",
   "version": "1.0.0",
-  "description": "",
+  "description": "A simple and low overhead pool for postgresql implemented using typescript.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@types/node": "^16.11.4",
-    "pg-native": "McDuckes/node-pg-native"
+    "@types/node": "^18.0.0",
+    "pg-native": "gudatr/node-pg-native"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/McDuckes/libpq-node-perf.git"
+    "url": "git+https://github.com/gudatr/libpq-node-perf.git"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/McDuckes/libpq-node-perf/issues"
+    "url": "https://github.com/gudatr/libpq-node-perf/issues"
   },
-  "homepage": "https://github.com/McDuckes/libpq-node-perf#readme"
+  "homepage": "https://github.com/gudatr/libpq-node-perf#readme"
 }

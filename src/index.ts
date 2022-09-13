@@ -1,20 +1,9 @@
 const Client = require('pg-native')
-
 const EMPTY_FUNCTION = (_client: PostgresClient) => { };
-const ILLEGAL_CHAR_REGEX = /\\|_|%/gi;
-const ILLEGAL_LIKE_CHARS: Dictionary<string> = {
-    "\\": "\\\\",
-    "_": "\\_",
-    "%": "\\%"
-};
-
-export interface Dictionary<T> {
-    [Key: string]: T;
-}
 
 export class PostgresClient {
 
-    private prepared: Dictionary<number> = {};
+    private prepared: { [Key: string]: number } = {};
 
     constructor(private client: any, private parentPool: Postgres) { }
 
@@ -70,10 +59,21 @@ export default class Postgres {
     private queue: ((client: PostgresClient) => void)[];
     private connectionStack: PostgresClient[] = [];
     private stackPosition = 0;
+    private escapeRegex = /\\|_|%/gi;
+    private escapeMatches: { [Key: string]: string } = {};
+    private escapeChar: string;
 
     public constructor(private config: ClientConfig) {
 
         this.queue = new Array(config.queueSize);
+        this.escapeChar = config.escapeChar;
+        this.escapeRegex = new RegExp(this.escapeChar.replaceAll('\\', '\\\\') + "|_|%", "gi");
+
+        this.escapeMatches = {
+            [this.escapeChar]: this.escapeChar + this.escapeChar,
+            "_": this.escapeChar + "_",
+            "%": this.escapeChar + "%"
+        };
 
         if (!config.socket) {
             this.connectionString = `postgresql://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;
@@ -159,9 +159,9 @@ export default class Postgres {
      * @param input 
      * @returns 
      */
-    public EscapeForLike(input: string): string {
-        return input.replace(ILLEGAL_CHAR_REGEX, function (matched) {
-            return ILLEGAL_LIKE_CHARS[matched];
+    public EscapeWildcards(input: string): string {
+        return input.replace(this.escapeRegex, (matched) => {
+            return this.escapeMatches[matched];
         });
     }
 }
@@ -175,8 +175,9 @@ export default class Postgres {
  *          'public'
  *          !['win32', 'darwin'].includes(process.platform), // This way we get a socket on unix and a tcp connection on other systems
  *          undefined,
- *          10, //You have to test this value for your work load, this is only a recommendation
- *          65535
+ *          10, //You have to test the threads value for your work load, this is only a recommendation
+ *          65535,
+ *          \\
  */
 export class ClientConfig {
     constructor(
@@ -188,6 +189,7 @@ export class ClientConfig {
         public socket: boolean = true,
         public password: string | undefined = undefined,
         public threads: number = 10,
-        public queueSize: number = 65535
+        public queueSize: number = 65535,
+        public escapeChar: string = '\\'
     ) { }
 }

@@ -15,7 +15,8 @@ let pool = new Postgres({
         socket: true, 
         password: 'pass',
         threads: 10,
-        queueSize: 65535
+        queueSize: 65535,
+        escapeChar: '\\'
 });
 ```
 Note: The queueSize defines the internal command queue of the pool.
@@ -53,9 +54,10 @@ try{
 In case you want to allow searches based on user input in your backend, using LIKE '%userinput%' for example,
 you can escape the input using
 ```javascript
-let escaped = pool.EscapeForLike(input)
+let escaped = pool.EscapeWildcards(input)
 ```
-This will escape characters that would otherwise be considered as patterns
+This will escape characters that would otherwise be considered as patterns.
+You can define your escape character in the ClientConfig
 
 ### Prepare Identifiers
 You can choose names for your prepared queries of course, but normally you would not care about the concrete name.

@@ -7,7 +7,6 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@types/node": "^18.0.0",
     "pg-native": "gudatr/node-pg-native"
   },
   "repository": {
@@ -19,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/gudatr/libpq-node-perf/issues"
   },
-  "homepage": "https://github.com/gudatr/libpq-node-perf#readme"
+  "homepage": "https://github.com/gudatr/libpq-node-perf#readme",
+  "devDependencies": {
+    "@types/node": "^18.11.18"
+  }
 }

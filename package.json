@@ -2,7 +2,8 @@
   "name": "libpq-node-perf",
   "version": "1.0.0",
   "description": "A simple and low overhead pool for postgresql implemented using typescript.",
-  "main": "index.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -62,6 +62,8 @@ export default class Postgres {
     private escapeRegex = /\\|_|%/gi;
     private escapeMatches: { [Key: string]: string } = {};
     private escapeChar: string;
+    private escapeArrayRegex = /{|}|"/gi;
+    private escapeArrayMatches: { [Key: string]: string } = {};
     client: any;
 
     public constructor(private config: ClientConfig) {
@@ -74,6 +76,12 @@ export default class Postgres {
             [this.escapeChar]: this.escapeChar + this.escapeChar,
             "_": this.escapeChar + "_",
             "%": this.escapeChar + "%"
+        };
+
+        this.escapeArrayMatches = {
+            "{": this.escapeChar + "{",
+            "}": this.escapeChar + "}",
+            '"': this.escapeChar + '"'
         };
 
         if (!config.socket) {
@@ -166,17 +174,40 @@ export default class Postgres {
     /**
      * This will get you a unique, smallest possible string on each call.
      * A helper function for creating prepared statements
-     * @returns 
+     * @returns string
      */
     public GetPrepareIdentifier(): string {
         return (this._prepareIndex++).toString(36);
     }
 
     /**
-     * If you want to apply full text search using LIKE you can pass user input through here to 
-     * escape characters that are considered for patterns
+    * Will transform the provided array into a string postgresql can recognize as a dynamic array.
+    * Instead of WHERE column IN ($1) you should be using WHERE column = ANY($1) so the conversion is performed
+    * @returns string
+    */
+    public TransformArray(array: (number[] | boolean[])): string {
+        return '{' + array.join(',') + '}';
+    }
+
+    /**
+    * Will transform the provided string array into a string postgresql can recognize as a dynamic array
+    * Instead of WHERE column IN ($1) you should be using WHERE column = ANY($1) so the conversion is performed
+    * @returns string
+    */
+    public TransformStringArray(array: (string[])): string {
+        for (let i = 0; i < array.length; i++) {
+            array[i] = '"' + array[i].replace(this.escapeArrayRegex, (matched) => {
+                return this.escapeArrayMatches[matched];
+            }) + '"';
+        }
+        return '{' + array.join(',') + '}';
+    }
+
+    /**
+     * If you want to run quries using LIKE you can pass user input through here to 
+     * escape characters that are considered for patterns if the value is a string
      * @param input 
-     * @returns 
+     * @returns string
      */
     public EscapeWildcards(input: string): string {
         return input.replace(this.escapeRegex, (matched) => {

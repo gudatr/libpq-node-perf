@@ -19,6 +19,8 @@ export default class Postgres {
     private escapeRegex;
     private escapeMatches;
     private escapeChar;
+    private escapeArrayRegex;
+    private escapeArrayMatches;
     client: any;
     constructor(config: ClientConfig);
     query(name: string, text: string, values: any[]): Promise<any[]>;
@@ -27,6 +29,8 @@ export default class Postgres {
     release(client: PostgresClient): void;
     private tick;
     GetPrepareIdentifier(): string;
+    TransformArray(array: (number[] | boolean[])): string;
+    TransformStringArray(array: (string[])): string;
     EscapeWildcards(input: string): string;
 }
 export declare class ClientConfig {

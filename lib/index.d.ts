@@ -19,9 +19,11 @@ export default class Postgres {
     private escapeRegex;
     private escapeMatches;
     private escapeChar;
+    client: any;
     constructor(config: ClientConfig);
     query(name: string, text: string, values: any[]): Promise<any[]>;
     connect(): Promise<PostgresClient>;
+    queryString(query: string): Promise<any[]>;
     release(client: PostgresClient): void;
     private tick;
     GetPrepareIdentifier(): string;

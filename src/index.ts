@@ -62,6 +62,7 @@ export default class Postgres {
     private escapeRegex = /\\|_|%/gi;
     private escapeMatches: { [Key: string]: string } = {};
     private escapeChar: string;
+    client: any;
 
     public constructor(private config: ClientConfig) {
 
@@ -121,6 +122,24 @@ export default class Postgres {
         return new Promise(async (resolve: (client: PostgresClient) => void) => {
             this.queue[++this.putPos >= this.queue.length ? this.putPos = 0 : this.putPos] = resolve;
             this.tick();
+        });
+    }
+
+    /**
+     * Query a string directly. Do not use it for transactions as it does pick the next available client for the query
+     * @param query 
+     * @returns 
+     */
+    public queryString(query: string): Promise<any[]> {
+        return new Promise(async (resolve: (result: any[]) => void, reject) => {
+            let client = await this.connect();
+            try {
+                this.client.query(query, reject, resolve);
+            } catch (err) {
+                reject(err);
+            } finally {
+                this.release(client);
+            }
         });
     }
 

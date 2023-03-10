@@ -18,9 +18,12 @@ let pool = new Postgres({
         queueSize: 65535,
         escapeChar: '\\'
 });
+
+await pool.initialize();
 ```
+
 Note: The queueSize defines the internal command queue of the pool.
-If this value is not enough you have a bottleneck somewhere else.
+If this sample value is not enough you might have a bottleneck somewhere else.
 
 ### Prepared Query (default and recommended)
 ```javascript

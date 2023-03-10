@@ -90,20 +90,27 @@ export default class Postgres {
             this.connectionString = `postgresql://${config.user}@/${config.database}?host=/var/run/postgresql/`;
         }
 
-        for (let i = 0; i < config.threads; i++) {
+    }
+
+    /**
+     * Initializes the pool with client instances and sets their search_path to the schema specified in the client config
+     * Await this function to make sure your app doesn't query the pool before it is ready
+     */
+    public async initialize() {
+        for (let i = 0; i < this.config.threads; i++) {
             let client = Client();
 
             client.connectSync(this.connectionString, (err: any) => {
                 if (err) throw err;
             });
 
-            client.query(`SET search_path TO ${config.schema}`, (err: any) => {
-                if (err) throw err;
-            }, EMPTY_FUNCTION);
+            await new Promise((resolve: (result: any[]) => void, reject) => {
+                this.client.query(`SET search_path TO ${this.config.schema}`, reject, resolve);
+            });
 
             this.connectionStack[i] = new PostgresClient(client, this);
         }
-        this.stackPosition = config.threads - 1;
+        this.stackPosition = this.config.threads - 1;
     }
 
     /**

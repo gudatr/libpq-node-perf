@@ -23,6 +23,7 @@ export default class Postgres {
     private escapeArrayMatches;
     client: any;
     constructor(config: ClientConfig);
+    initialize(): Promise<void>;
     query(name: string, text: string, values: any[]): Promise<any[]>;
     connect(): Promise<PostgresClient>;
     queryString(query: string): Promise<any[]>;

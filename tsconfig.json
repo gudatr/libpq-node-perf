@@ -8,7 +8,6 @@
     "moduleResolution": "node",
     "allowJs": true,
     "outDir": "lib",
-    "removeComments": true,
     "rootDir": "src",
     "strict": true,
     "noImplicitAny": true,

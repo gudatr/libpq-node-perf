@@ -31,12 +31,12 @@ let items: Item[] = await pool.query("get-player-items", "SELECT * FROM items WH
 ```
 Note: You do not have to supply a parameter, an empty [] array will do then
 
-### Simple String Query
+### Simple String Query, no preparation
 ```javascript
 let players: Player[] = pool.queryString("SELECT * FROM players");
 ```
 
-### Transaction
+### Transactions
 ```javascript
 let client = await pool.connect();
 try{
@@ -64,7 +64,8 @@ You can define your escape character in the ClientConfig
 
 ### Prepare Identifiers
 You can choose names for your prepared queries of course, but normally you would not care about the concrete name.
-You can generate an alias for your query that is unique and as small as possible using
+You can generate an alias for your query that is unique and as small as possible
+
 ```javascript
 let identifier = pool.GetPrepareIdentifier();
 ```

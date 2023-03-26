@@ -105,7 +105,7 @@ export default class Postgres {
             });
 
             await new Promise((resolve: (result: any[]) => void, reject) => {
-                this.client.query(`SET search_path TO ${this.config.schema}`, reject, resolve);
+                client.query(`SET search_path TO ${this.config.schema}`, reject, resolve);
             });
 
             this.connectionStack[i] = new PostgresClient(client, this);

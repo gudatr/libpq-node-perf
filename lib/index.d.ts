@@ -99,17 +99,17 @@ export default class Postgres {
     EscapeWildcards(input: string): string;
 }
 /**
- *         example config:
- *          'postgres',
- *          '127.0.0.1',
- *          5432,
- *          'template1',
- *          'public'
- *          !['win32', 'darwin'].includes(process.platform), // This way we get a socket on unix and a tcp connection on other systems
- *          undefined,
- *          10, //You have to test the threads value for your work load, this is only a recommendation
- *          65535,
- *          \\
+    example config:
+    'postgres',
+    '127.0.0.1',
+    5432,
+    'template1',
+    'public'
+    '/var/run/postgresql/', //Leave this undefined for a tcp connection
+    undefined,
+    10, //You have to test the threads value for your work load, this is only a recommendation
+    65535,
+    \\
  */
 export declare class ClientConfig {
     user: string;
@@ -117,10 +117,10 @@ export declare class ClientConfig {
     port: number;
     database: string;
     schema: string;
-    socket: boolean;
+    socket: string | undefined;
     password: string | undefined;
     threads: number;
     queueSize: number;
     escapeChar: string;
-    constructor(user: string, host: string, port: number, database: string, schema: string, socket?: boolean, password?: string | undefined, threads?: number, queueSize?: number, escapeChar?: string);
+    constructor(user: string, host: string, port: number, database: string, schema: string, socket: string | undefined, password: string | undefined, threads?: number, queueSize?: number, escapeChar?: string);
 }

@@ -87,7 +87,7 @@ export default class Postgres {
         if (!config.socket) {
             this.connectionString = `postgresql://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;
         } else {
-            this.connectionString = `postgresql://${config.user}@/${config.database}?host=/var/run/postgresql/`;
+            this.connectionString = `postgresql://${config.user}@/${config.database}?host=${config.socket}`;
         }
 
     }
@@ -224,17 +224,17 @@ export default class Postgres {
 }
 
 /**
- *         example config:
- *          'postgres',
- *          '127.0.0.1',
- *          5432,
- *          'template1',
- *          'public'
- *          !['win32', 'darwin'].includes(process.platform), // This way we get a socket on unix and a tcp connection on other systems
- *          undefined,
- *          10, //You have to test the threads value for your work load, this is only a recommendation
- *          65535,
- *          \\
+    example config:
+    'postgres',
+    '127.0.0.1',
+    5432,
+    'template1',
+    'public'
+    '/var/run/postgresql/', //Leave this undefined for a tcp connection
+    undefined,
+    10, //You have to test the threads value for your work load, this is only a recommendation
+    65535,
+    \\
  */
 export class ClientConfig {
     constructor(
@@ -243,8 +243,8 @@ export class ClientConfig {
         public port: number,
         public database: string,
         public schema: string,
-        public socket: boolean = true,
-        public password: string | undefined = undefined,
+        public socket: string | undefined,
+        public password: string | undefined,
         public threads: number = 10,
         public queueSize: number = 65535,
         public escapeChar: string = '\\'

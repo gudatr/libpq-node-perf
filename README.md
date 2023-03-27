@@ -10,9 +10,9 @@ let pool = new Postgres({
         user: 'postgres',
         host: '127.0.0.1',
         port: 5432,
-        database: 'database',
+        database: 'db',
         schema: 'public',
-        socket: true, 
+        socket: '/var/run/postgresql/', 
         password: 'pass',
         threads: 10,
         queueSize: 65535,
@@ -33,10 +33,15 @@ Note: You do not have to supply a parameter, an empty [] array will do then
 
 ### Simple String Query, no preparation
 ```javascript
-let players: Player[] = pool.queryString("SELECT * FROM players");
+let players: Player[] = await pool.queryString("SELECT * FROM players");
 ```
 
 ### Transactions
+
+Performing transactions requires you to use the same client.
+Use the connect function to aquire one and execute your queries.
+Make sure to finally release the client to the pool does not clog and die horribly.
+
 ```javascript
 let client = await pool.connect();
 try{

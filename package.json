@@ -1,12 +1,9 @@
 {
   "name": "postgres-pool",
-  "version": "1.0.1",
-  "description": "A simple and low overhead pool for postgresql implemented using typescript.",
+  "version": "1.0.3",
+  "description": "A very low overhead and easily setup pool for postgresql.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "dependencies": {
     "pg-native": "gudatr/node-pg-native"
   },
@@ -14,7 +11,7 @@
     "type": "git",
     "url": "git+https://github.com/gudatr/postgres-pool.git"
   },
-  "author": "",
+  "author": "github:gudatr",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/gudatr/postgres-pool/issues"
@@ -22,5 +19,16 @@
   "homepage": "https://github.com/gudatr/postgres-pool#readme",
   "devDependencies": {
     "@types/node": "^18.11.18"
-  }
+  },
+  "keywords": [
+    "database",
+    "postgres",
+    "postgresql",
+    "pool",
+    "pooling",
+    "prepared",
+    "connector",
+    "driver",
+    "performance"
+  ]
 }

@@ -9,7 +9,6 @@ export class PostgresClient {
 
     /**
      * Execute a statement, prepare it if it has not been prepared already.
-     * You best use the GetPrepareIdentifier function for optimal performance.
      * @param queryName 
      * @param text 
      * @param values 
@@ -149,7 +148,7 @@ export default class Postgres {
         return new Promise(async (resolve: (result: any[]) => void, reject) => {
             let client = await this.connect();
             try {
-                this.client.query(query, reject, resolve);
+                resolve(await client.queryString(query));
             } catch (err) {
                 reject(err);
             } finally {
@@ -168,7 +167,7 @@ export default class Postgres {
     }
 
     /**
-     * Grab a waiting query from the queue and execute it on the top available client
+     * Grab a waiting query from the queue and execute it on the next available client
      */
     private tick() {
         while (this.stackPosition > -1 && this.getPos !== this.putPos) {
@@ -183,7 +182,7 @@ export default class Postgres {
      * A helper function for creating prepared statements
      * @returns string
      */
-    public GetPrepareIdentifier(): string {
+    public getPrepareIdentifier(): string {
         return (this._prepareIndex++).toString(36);
     }
 
@@ -192,7 +191,7 @@ export default class Postgres {
     * Instead of WHERE column IN ($1) you should be using WHERE column = ANY($1) so the conversion is performed
     * @returns string
     */
-    public TransformArray(array: (number[] | boolean[])): string {
+    public transformArray(array: (number[] | boolean[])): string {
         return '{' + array.join(',') + '}';
     }
 
@@ -201,7 +200,7 @@ export default class Postgres {
     * Instead of WHERE column IN ($1) you should be using WHERE column = ANY($1) so the conversion is performed
     * @returns string
     */
-    public TransformStringArray(array: (string[])): string {
+    public transformStringArray(array: (string[])): string {
         for (let i = 0; i < array.length; i++) {
             array[i] = '"' + array[i].replace(this.escapeArrayRegex, (matched) => {
                 return this.escapeArrayMatches[matched];
@@ -216,7 +215,7 @@ export default class Postgres {
      * @param input 
      * @returns string
      */
-    public EscapeWildcards(input: string): string {
+    public escapeWildcards(input: string): string {
         return input.replace(this.escapeRegex, (matched) => {
             return this.escapeMatches[matched];
         });
@@ -225,16 +224,18 @@ export default class Postgres {
 
 /**
     example config:
-    'postgres',
-    '127.0.0.1',
-    5432,
-    'template1',
-    'public'
-    '/var/run/postgresql/', //Leave this undefined for a tcp connection
-    undefined,
-    10, //You have to test the threads value for your work load, this is only a recommendation
-    65535,
-    \\
+    {
+        user: 'postgres',
+        host: '127.0.0.1',
+        port: 5432,
+        database: 'template1',
+        schema: 'public',
+        socket: undefined, 
+        password: undefined,
+        threads: 10,
+        queueSize: 65535,
+        escapeChar: '\\'
+    }
  */
 export class ClientConfig {
     constructor(

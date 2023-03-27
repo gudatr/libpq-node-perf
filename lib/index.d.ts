@@ -5,7 +5,6 @@ export declare class PostgresClient {
     constructor(client: any, parentPool: Postgres);
     /**
      * Execute a statement, prepare it if it has not been prepared already.
-     * You best use the GetPrepareIdentifier function for optimal performance.
      * @param queryName
      * @param text
      * @param values
@@ -69,7 +68,7 @@ export default class Postgres {
      */
     release(client: PostgresClient): void;
     /**
-     * Grab a waiting query from the queue and execute it on the top available client
+     * Grab a waiting query from the queue and execute it on the next available client
      */
     private tick;
     /**
@@ -77,39 +76,41 @@ export default class Postgres {
      * A helper function for creating prepared statements
      * @returns string
      */
-    GetPrepareIdentifier(): string;
+    getPrepareIdentifier(): string;
     /**
     * Will transform the provided array into a string postgresql can recognize as a dynamic array.
     * Instead of WHERE column IN ($1) you should be using WHERE column = ANY($1) so the conversion is performed
     * @returns string
     */
-    TransformArray(array: (number[] | boolean[])): string;
+    transformArray(array: (number[] | boolean[])): string;
     /**
     * Will transform the provided string array into a string postgresql can recognize as a dynamic array
     * Instead of WHERE column IN ($1) you should be using WHERE column = ANY($1) so the conversion is performed
     * @returns string
     */
-    TransformStringArray(array: (string[])): string;
+    transformStringArray(array: (string[])): string;
     /**
      * If you want to run quries using LIKE you can pass user input through here to
      * escape characters that are considered for patterns if the value is a string
      * @param input
      * @returns string
      */
-    EscapeWildcards(input: string): string;
+    escapeWildcards(input: string): string;
 }
 /**
     example config:
-    'postgres',
-    '127.0.0.1',
-    5432,
-    'template1',
-    'public'
-    '/var/run/postgresql/', //Leave this undefined for a tcp connection
-    undefined,
-    10, //You have to test the threads value for your work load, this is only a recommendation
-    65535,
-    \\
+    {
+        user: 'postgres',
+        host: '127.0.0.1',
+        port: 5432,
+        database: 'template1',
+        schema: 'public',
+        socket: undefined,
+        password: undefined,
+        threads: 10,
+        queueSize: 65535,
+        escapeChar: '\\'
+    }
  */
 export declare class ClientConfig {
     user: string;

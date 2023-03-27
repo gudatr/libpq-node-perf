@@ -62,7 +62,7 @@ try{
 In case you want to allow searches based on user input in your backend, using LIKE '%userinput%' for example,
 you can escape the input using
 ```javascript
-let escaped = pool.EscapeWildcards(input)
+let escaped = pool.escapeWildcards(input)
 ```
 This will escape characters that would otherwise be considered as patterns.
 You can define your escape character in the ClientConfig
@@ -72,16 +72,16 @@ You can choose names for your prepared queries of course, but normally you would
 You can generate an alias for your query that is unique and as small as possible
 
 ```javascript
-let identifier = pool.GetPrepareIdentifier();
+let identifier = pool.getPrepareIdentifier();
 ```
 
 Example usage:
 ```javascript
-const GetAllItemsName = Pool.GetPrepareIdentifier();
-const GetAllItemsQuery = "SELECT * FROM items WHERE player_id=$1";
+const getAllItemsName = Pool.getPrepareIdentifier();
+const getAllItemsQuery = "SELECT * FROM items WHERE player_id=$1";
 
-function GetItemsForPlayer(player_id: number){
-    items : Item[] = await pool.query(GetAllItemsName, GetAllItemsQuery, [player_id]);
+function getItemsForPlayer(player_id: number){
+    items : Item[] = await pool.query(getAllItemsName, getAllItemsQuery, [player_id]);
 }
 ```
 

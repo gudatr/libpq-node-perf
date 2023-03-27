@@ -1,7 +1,7 @@
 {
-  "name": "postgres-pool",
+  "name": "pg-pool-minimal",
   "version": "1.0.3",
-  "description": "A very low overhead and easily setup pool for postgresql.",
+  "description": "A low overhead and easily setup pool for postgresql.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "dependencies": {

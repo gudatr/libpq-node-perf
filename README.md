@@ -40,7 +40,7 @@ let players: Player[] = await pool.queryString("SELECT * FROM players");
 
 Performing transactions requires you to use the same client.
 Use the connect function to aquire one and execute your queries.
-Make sure to finally release the client to the pool does not clog and die horribly.
+Make sure to finally release the client to the pool soo it does not clog and die horribly.
 
 ```javascript
 let client = await pool.connect();
@@ -65,7 +65,7 @@ you can escape the input using
 let escaped = pool.escapeWildcards(input)
 ```
 This will escape characters that would otherwise be considered as patterns.
-You can define your escape character in the ClientConfig
+You can define your escape character in the ClientConfig of the pool constructor.
 
 ### Prepare Identifiers
 You can choose names for your prepared queries of course, but normally you would not care about the concrete name.

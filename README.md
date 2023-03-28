@@ -20,7 +20,7 @@ sudo find / -name "pg_config" -print
 
 Then add the result to your shell file, e.g.:
 ```
-echo 'export PATH=$PATH:/opt/homebrew/Cellar/libpq/15.2/bin/pg_config' >> ~/.zshrc
+echo 'export PATH="/opt/homebrew/Cellar/libpq/15.2/bin:$PATH"' >> ~/.zshrc
 ```
 
 #### Ubuntu/Debian:

@@ -6,6 +6,25 @@ Pooling is done automatically but it allows you to take control for transactions
 
 ### Installation
 
+The package pg-native that provides the native bindings, requires the PostgreSQL client libraries & tools. Check if the command pg_config is known to your machine. Take the following steps:
+
+* MacOS:
+brew install libpq
+If it is still not there, search with: sudo find / -name "pg_config" -print
+Then add the result to your shell file, e.g.: echo 'export PATH=$PATH:/opt/homebrew/Cellar/libpq/15.2/bin/pg_config' >> ~/.zshrc
+
+* Ubuntu/Debian:
+apt-get install libpq-dev g++ make
+
+* RHEL/CentOS:
+yum install postgresql-devel
+
+*  Windows:
+Install PostgreSQL (http://www.postgresql.org/download/windows/)
+Add your Postgre Installation's bin folder to the system path (i.e. C:\Program Files\PostgreSQL\X.X\bin).
+Make sure that both libpq.dll and pg_config.exe are in that folder.
+
+
 ```
 npm install pg-pool-minimal
 ```

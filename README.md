@@ -1,8 +1,14 @@
-# Postgres Pool
+# Postgresql Pool
 A simple and lightweight pool implementation for postgresql.
 Pooling is done automatically but it allows you to take control for transactions.
 
 ## Usage
+
+### Installation
+
+```
+npm install pg-pool-minimal
+```
 
 ### Initialization
 ```javascript

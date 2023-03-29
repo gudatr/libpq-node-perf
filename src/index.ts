@@ -99,7 +99,7 @@ export default class Postgres {
         for (let i = 0; i < this.config.threads; i++) {
             let client = Client();
 
-            client.connectSync(this.connectionString, (err: any) => {
+            client.connect(this.connectionString, (err: any) => {
                 if (err) throw err;
             });
 

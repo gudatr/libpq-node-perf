@@ -1,11 +1,11 @@
 {
   "name": "pg-pool-minimal",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "A low overhead and easily set up pool for postgresql. Compatible with unix sockets.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "dependencies": {
-    "pg-native": "gudatr/node-pg-native"
+    "pg-native": "gudatr/pg-native"
   },
   "repository": {
     "type": "git",

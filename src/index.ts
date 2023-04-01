@@ -84,7 +84,7 @@ export default class Postgres {
         };
 
         if (!config.socket) {
-            this.connectionString = `postgresql://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;
+            this.connectionString = `postgresql://${config.user}:${config.password ?? ''}@${config.host}:${config.port}/${config.database}`;
         } else {
             this.connectionString = `postgresql://${config.user}@/${config.database}?host=${config.socket}`;
         }
@@ -97,7 +97,7 @@ export default class Postgres {
      */
     public async initialize() {
         for (let i = 0; i < this.config.threads; i++) {
-            let client = Client();
+            let client = Client(this.config.valuesOnly);
 
             client.connect(this.connectionString, (err: any) => {
                 if (err) throw err;
@@ -234,7 +234,8 @@ export default class Postgres {
         password: undefined,
         threads: 10,
         queueSize: 65535,
-        escapeChar: '\\'
+        escapeChar: '\\',
+        valuesOnly: false
     }
  */
 export class ClientConfig {
@@ -248,6 +249,7 @@ export class ClientConfig {
         public password: string | undefined,
         public threads: number = 10,
         public queueSize: number = 65535,
-        public escapeChar: string = '\\'
+        public escapeChar: string = '\\',
+        public valuesOnly: boolean = false
     ) { }
 }

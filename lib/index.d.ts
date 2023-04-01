@@ -109,7 +109,8 @@ export default class Postgres {
         password: undefined,
         threads: 10,
         queueSize: 65535,
-        escapeChar: '\\'
+        escapeChar: '\\',
+        valuesOnly: false
     }
  */
 export declare class ClientConfig {
@@ -123,5 +124,6 @@ export declare class ClientConfig {
     threads: number;
     queueSize: number;
     escapeChar: string;
-    constructor(user: string, host: string, port: number, database: string, schema: string, socket: string | undefined, password: string | undefined, threads?: number, queueSize?: number, escapeChar?: string);
+    valuesOnly: boolean;
+    constructor(user: string, host: string, port: number, database: string, schema: string, socket: string | undefined, password: string | undefined, threads?: number, queueSize?: number, escapeChar?: string, valuesOnly?: boolean);
 }

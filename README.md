@@ -57,13 +57,18 @@ let pool = new Postgres({
         password: 'pass',
         threads: 10,
         queueSize: 65535,
-        escapeChar: '\\'
+        escapeChar: '\\',
+        valuesOnly: false
 });
 
 await pool.initialize();
 ```
 
-Note: The queueSize defines the internal command queue of the pool.
+By default queries will return objects mapping column to value. If you want the queries to only return an array of values instead of said object (column order will be guaranteed), you can set valuesOnly to true.
+
+If you do not want to use a unix socket, leave the socket parameter undefined.
+
+The queueSize defines the internal command queue of the pool.
 If this sample value is not enough you might have a bottleneck somewhere else.
 
 ### Prepared Query (default and recommended)

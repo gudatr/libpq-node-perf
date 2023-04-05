@@ -1,27 +1,5 @@
-export declare class PostgresClient {
-    private client;
-    private parentPool;
-    private prepared;
-    constructor(client: any, parentPool: Postgres);
-    /**
-     * Execute a statement, prepare it if it has not been prepared already.
-     * @param queryName
-     * @param text
-     * @param values
-     * @returns
-     */
-    query(queryName: string, text: string, values: any[]): Promise<any[]>;
-    /**
-     * Query a string directly. Useful for starting transactions, etc.
-     * @param query
-     * @returns
-     */
-    queryString(query: string): Promise<any[]>;
-    /**
-     * Release the client back into the pool
-     */
-    release(): void;
-}
+/// <reference types="node" />
+import EventEmitter from "events";
 export default class Postgres {
     private config;
     private connectionString;
@@ -126,4 +104,51 @@ export declare class ClientConfig {
     escapeChar: string;
     valuesOnly: boolean;
     constructor(user: string, host: string, port: number, database: string, schema: string, socket: string | undefined, password: string | undefined, threads?: number, queueSize?: number, escapeChar?: string, valuesOnly?: boolean);
+}
+export declare class PostgresClient extends EventEmitter {
+    private parentPool;
+    private parse;
+    private pq;
+    private isReading;
+    private resolveCallback;
+    private rejectCallback;
+    private error;
+    private fieldCount;
+    private names;
+    private types;
+    private rows;
+    private prepared;
+    /**
+     * Execute a statement, prepare it if it has not been prepared already.
+     * @param queryName
+     * @param text
+     * @param values
+     * @returns
+     */
+    query(queryName: string, text: string, values: any[]): Promise<any[]>;
+    /**
+     * Query a string directly. Useful for starting transactions, etc.
+     * @param query
+     * @returns
+     */
+    queryString(query: string): Promise<any[]>;
+    /**
+     * Release the client back into the pool
+     */
+    release(): void;
+    constructor(valuesOnly: boolean | undefined, parentPool: Postgres);
+    private readValue;
+    private parseObject;
+    private parseArray;
+    private consumeFields;
+    connect(params: string, cb: (err: Error) => any): any;
+    private internalQuery;
+    prepare(statementName: string, text: string, nParams: number, reject: (err: Error) => void, resolve: (res: any) => void): void;
+    execute(statementName: string, parameters: any[], reject: (err: Error) => void, resolve: (res: any) => void): void;
+    private waitForDrain;
+    private readError;
+    private stopReading;
+    private emitResult;
+    private readData;
+    private startReading;
 }

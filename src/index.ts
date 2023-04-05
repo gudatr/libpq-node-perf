@@ -205,8 +205,8 @@ export class ClientConfig {
 }
 
 let Libpq = require('libpq');
-
 let typeParsers = require('pg-types');
+
 //Reduces the lookup time for the parser
 let typesFlat = [];
 
@@ -222,7 +222,7 @@ const NOTIFICATION = 'notification';
 
 export class PostgresClient extends EventEmitter {
     private parse: (arg: number) => any;
-    private pq = new Libpq();
+    private pq: any;
     private isReading = false;
     private resolveCallback = (rows: any) => { };
     private rejectCallback = (err: any) => { };
@@ -231,7 +231,7 @@ export class PostgresClient extends EventEmitter {
     private names: string[] = [];
     private types: any[] = [];
     private rows: any[] = [];
-    private prepared: { [Key: string]: number } = {};
+    private prepared: { [Key: string]: boolean } = {};
 
     /**
      * Execute a statement, prepare it if it has not been prepared already.
@@ -250,7 +250,7 @@ export class PostgresClient extends EventEmitter {
 
         return new Promise((resolve: (result: any[]) => void, reject) => {
             this.prepare(queryName, text, values.length, reject, () => {
-                this.prepared[queryName] = 1;
+                this.prepared[queryName] = true;
                 this.execute(queryName, values, reject, resolve);
             });
         });
@@ -279,7 +279,10 @@ export class PostgresClient extends EventEmitter {
 
         this.parse = (valuesOnly ? this.parseArray : this.parseObject).bind(this);
 
-        this.pq.on('readable', this.readData)
+        this.pq = new Libpq();
+
+        this.pq.on('readable', this.readData.bind(this));
+
         this.on('newListener', (event: string) => {
             if (event !== NOTIFICATION) return;
             this.startReading()
@@ -382,17 +385,16 @@ export class PostgresClient extends EventEmitter {
             case 'PGRES_COMMAND_OK':
             case 'PGRES_EMPTY_QUERY':
                 this.consumeFields();
-                break
+                break;
             case 'PGRES_FATAL_ERROR':
                 this.error = new Error(this.pq.$resultErrorMessage());
-                break
+                break;
             case 'PGRES_COPY_OUT':
-            case 'PGRES_COPY_BOTH': {
-                break
-            }
+            case 'PGRES_COPY_BOTH':
+                break;
             default:
                 this.readError('unrecognized command status: ' + status);
-                break
+                break;
         }
         return status;
     }

@@ -1,12 +1,12 @@
 # pg-pool-minimal
-A simple and lightweight pool implementation for postgresql.
+A simple pool implementation for postgresql with lightweight client code and helper functions.
 Pooling is done automatically but it allows you to take control for transactions.
 
-## Usage
+## Installation
 
-### Installation
+### Prerequisites
 
-The package pg-native that provides the native bindings, requires the PostgreSQL client libraries & tools. To validate them, check if the command pg_config is known to your machine. If not, take the following steps:
+The package libpq that provides the native bindings, requires the PostgreSQL client libraries & tools. To validate them, check if the command pg_config is known to your machine. If not, take the following steps:
 
 #### MacOS
 ```
@@ -37,13 +37,14 @@ yum install postgresql-devel
 Install PostgreSQL (http://www.postgresql.org/download/windows/) and add your PostgreSQL installation's bin folder to the system path (e.g. C:\Program Files\PostgreSQL\X.X\bin). Make sure that both libpq.dll and pg_config.exe are in that folder.
 
 
-
 ### Package
 
 Once the tools are installed, install the package:
 ```
 npm install pg-pool-minimal
 ```
+
+## Usage
 
 ### Initialization
 ```javascript
@@ -53,7 +54,7 @@ let pool = new Postgres({
         port: 5432,
         database: 'template1',
         schema: 'public',
-        socket: undefined, 
+        socket: '/var/run/postgresql', 
         password: '',
         threads: 10,
         queueSize: 65535,
@@ -66,7 +67,7 @@ await pool.initialize();
 
 By default queries will return objects mapping column to value. If you want the queries to only return an array of values instead of said object (column order will be guaranteed), you can set valuesOnly to true.
 
-If you do not want to use a unix socket, leave the socket parameter undefined.
+If you do not want to or can use a unix socket, leave the socket parameter undefined.
 
 The queueSize defines the internal command queue of the pool.
 If this sample value is not enough you might have a bottleneck somewhere else.

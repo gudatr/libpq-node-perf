@@ -30,7 +30,7 @@ export default class Postgres {
      */
     query(name: string, text: string, values: any[]): Promise<any[]>;
     /**
-     * Grab a client from the pool or wait until one is freed and the internal tick is called
+     * Grab a client from the pool or wait until one becomes available and the internal tick is called
      * @returns
      */
     connect(): Promise<PostgresClient>;
@@ -141,9 +141,27 @@ export declare class PostgresClient extends EventEmitter {
     private parseObject;
     private parseArray;
     private consumeFields;
-    connect(params: string, cb: (err: Error) => any): any;
+    /**
+     * Attempts to connect using the provided connection string. Blocking.
+     * @param connectionString
+     * @param cb
+     * @returns
+     */
+    connect(connectionString: string, cb: (err: Error) => any): any;
     private internalQuery;
+    /**
+     * Prepares a statement, calls reject on fail, resolve on success
+     * @param connectionString
+     * @param cb
+     * @returns
+     */
     prepare(statementName: string, text: string, nParams: number, reject: (err: Error) => void, resolve: (res: any) => void): void;
+    /**
+     * Executes a prepared statement, calls reject on fail, resolve on success
+     * @param connectionString
+     * @param cb
+     * @returns
+     */
     execute(statementName: string, parameters: any[], reject: (err: Error) => void, resolve: (res: any) => void): void;
     private waitForDrain;
     private readError;

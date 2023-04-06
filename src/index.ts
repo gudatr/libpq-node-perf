@@ -2,7 +2,6 @@ import EventEmitter from "events";
 
 const EMPTY_FUNCTION = (_client: PostgresClient) => { };
 
-
 export default class Postgres {
     private connectionString: string;
     private _prepareIndex = 0;
@@ -79,7 +78,7 @@ export default class Postgres {
     }
 
     /**
-     * Grab a client from the pool or wait until one is freed and the internal tick is called
+     * Grab a client from the pool or wait until one becomes available and the internal tick is called
      * @returns 
      */
     public connect(): Promise<PostgresClient> {
@@ -327,10 +326,16 @@ export class PostgresClient extends EventEmitter {
         }
     }
 
-    connect(params: string, cb: (err: Error) => any) {
+    /**
+     * Attempts to connect using the provided connection string. Blocking.
+     * @param connectionString 
+     * @param cb 
+     * @returns 
+     */
+    public connect(connectionString: string, cb: (err: Error) => any) {
         this.names = [];
         this.types = [];
-        this.pq.connectSync(params);
+        this.pq.connectSync(connectionString);
         if (!this.pq.$setNonBlocking(1)) return cb(new Error('Unable to set non-blocking to true'));
     }
 
@@ -342,6 +347,12 @@ export class PostgresClient extends EventEmitter {
         this.waitForDrain();
     }
 
+    /**
+     * Prepares a statement, calls reject on fail, resolve on success
+     * @param connectionString 
+     * @param cb 
+     * @returns 
+     */
     prepare(statementName: string, text: string, nParams: number, reject: (err: Error) => void, resolve: (res: any) => void) {
         this.stopReading();
         if (!this.pq.$sendPrepare(statementName, text, nParams)) return reject(new Error(this.pq.$getLastErrorMessage() || 'Something went wrong dispatching the query'));
@@ -350,6 +361,12 @@ export class PostgresClient extends EventEmitter {
         this.waitForDrain();
     }
 
+    /**
+     * Executes a prepared statement, calls reject on fail, resolve on success
+     * @param connectionString 
+     * @param cb 
+     * @returns 
+     */
     execute(statementName: string, parameters: any[], reject: (err: Error) => void, resolve: (res: any) => void) {
         this.stopReading();
         if (!this.pq.$sendQueryPrepared(statementName, parameters)) return reject(new Error(this.pq.$getLastErrorMessage() || 'Something went wrong dispatching the query'));

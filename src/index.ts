@@ -52,9 +52,7 @@ export default class Postgres {
         for (let i = 0; i < this.config.threads; i++) {
             let client = this.connectionStack[i] = new PostgresClient(this.config.valuesOnly, this);
 
-            client.connect(this.connectionString, (err: any) => {
-                if (err) throw err;
-            });
+            client.connect(this.connectionString);
 
             await client.queryString(`SET search_path TO ${this.config.schema}`);
         }
@@ -332,11 +330,11 @@ export class PostgresClient extends EventEmitter {
      * @param cb 
      * @returns 
      */
-    public connect(connectionString: string, cb: (err: Error) => any) {
+    public connect(connectionString: string) {
         this.names = [];
         this.types = [];
         this.pq.connectSync(connectionString);
-        if (!this.pq.$setNonBlocking(1)) return cb(new Error('Unable to set non-blocking to true'));
+        if (!this.pq.$setNonBlocking(1)) throw new Error('Unable to set non-blocking to true');
     }
 
     private internalQuery(text: string, reject: (err: Error) => void, resolve: (res: any) => void) {

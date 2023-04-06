@@ -147,7 +147,7 @@ export declare class PostgresClient extends EventEmitter {
      * @param cb
      * @returns
      */
-    connect(connectionString: string, cb: (err: Error) => any): any;
+    connect(connectionString: string): void;
     private internalQuery;
     /**
      * Prepares a statement, calls reject on fail, resolve on success

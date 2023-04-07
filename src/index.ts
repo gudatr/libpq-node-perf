@@ -259,7 +259,7 @@ export class PostgresClient extends EventEmitter {
      * @returns 
      */
     public queryString(query: string): Promise<any[]> {
-        return new Promise((resolve: (result: any[]) => void, reject) => {
+        return new Promise((resolve, reject) => {
             this.internalQuery(query, reject, resolve);
         });
     }

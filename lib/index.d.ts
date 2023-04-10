@@ -7,6 +7,7 @@ export default class Postgres {
     private getPos;
     private putPos;
     private queue;
+    private queueSize;
     private connectionStack;
     private stackPosition;
     private escapeRegex;

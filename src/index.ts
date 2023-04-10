@@ -9,6 +9,7 @@ export default class Postgres {
     private getPos = 0;
     private putPos = 0;
     private queue: ((client: PostgresClient) => void)[];
+    private queueSize: number;
     private connectionStack: PostgresClient[] = [];
     private stackPosition = 0;
     private escapeRegex = /\\|_|%/gi;
@@ -21,6 +22,7 @@ export default class Postgres {
     public constructor(private config: ClientConfig) {
 
         this.queue = new Array(config.queueSize);
+        this.queueSize = config.queueSize;
         this.escapeChar = config.escapeChar;
         this.escapeRegex = new RegExp(this.escapeChar.replaceAll('\\', '\\\\') + "|_|%", "gi");
 
@@ -81,7 +83,7 @@ export default class Postgres {
      */
     public connect(): Promise<PostgresClient> {
         return new Promise(async (resolve: (client: PostgresClient) => void) => {
-            this.queue[++this.putPos >= this.queue.length ? this.putPos = 0 : this.putPos] = resolve;
+            this.queue[this.putPos = (this.putPos + 1) % this.queueSize] = resolve;
             this.tick();
         });
     }
@@ -118,7 +120,8 @@ export default class Postgres {
      */
     private tick() {
         while (this.stackPosition > -1 && this.getPos !== this.putPos) {
-            let handler = this.queue[++this.getPos >= this.queue.length ? this.getPos = 0 : this.getPos];
+            this.getPos = (this.getPos + 1) % this.queueSize;
+            let handler = this.queue[this.getPos];
             this.queue[this.getPos] = EMPTY_FUNCTION;
             handler(this.connectionStack[this.stackPosition--]);
         }

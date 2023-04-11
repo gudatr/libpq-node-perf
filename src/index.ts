@@ -83,7 +83,7 @@ export default class Postgres {
      */
     public connect(): Promise<PostgresClient> {
         return new Promise(async (resolve: (client: PostgresClient) => void) => {
-            this.queue[this.putPos = (this.putPos + 1) % this.queueSize] = resolve;
+            this.queue[++this.putPos >= this.queueSize ? this.putPos = 0 : this.putPos] = resolve;
             this.tick();
         });
     }
@@ -120,7 +120,7 @@ export default class Postgres {
      */
     private tick() {
         while (this.stackPosition > -1 && this.getPos !== this.putPos) {
-            this.getPos = (this.getPos + 1) % this.queueSize;
+            if (++this.getPos >= this.queueSize) this.getPos = 0;
             let handler = this.queue[this.getPos];
             this.queue[this.getPos] = EMPTY_FUNCTION;
             handler(this.connectionStack[this.stackPosition--]);

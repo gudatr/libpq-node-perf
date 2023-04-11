@@ -83,7 +83,8 @@ export default class Postgres {
      */
     public connect(): Promise<PostgresClient> {
         return new Promise(async (resolve: (client: PostgresClient) => void) => {
-            this.queue[++this.putPos >= this.queueSize ? this.putPos = 0 : this.putPos] = resolve;
+            if (++this.putPos >= this.queueSize) this.putPos = 0;
+            this.queue[this.putPos] = resolve;
             this.tick();
         });
     }

@@ -1,5 +1,3 @@
-/// <reference types="node" />
-import EventEmitter from "events";
 export default class Postgres {
     private config;
     private connectionString;
@@ -106,10 +104,10 @@ export declare class ClientConfig {
     valuesOnly: boolean;
     constructor(user: string, host: string, port: number, database: string, schema: string, socket: string | undefined, password: string | undefined, threads?: number, queueSize?: number, escapeChar?: string, valuesOnly?: boolean);
 }
-export declare class PostgresClient extends EventEmitter {
+declare let Libpq: any;
+export declare class PostgresClient extends Libpq {
     private parentPool;
     private parse;
-    private pq;
     private isReading;
     private resolveCallback;
     private rejectCallback;
@@ -156,14 +154,14 @@ export declare class PostgresClient extends EventEmitter {
      * @param cb
      * @returns
      */
-    prepare(statementName: string, text: string, nParams: number, reject: (err: Error) => void, resolve: (res: any) => void): void;
+    prepareStatement(statementName: string, text: string, nParams: number, reject: (err: Error) => void, resolve: (res: any) => void): void;
     /**
      * Executes a prepared statement, calls reject on fail, resolve on success
      * @param connectionString
      * @param cb
      * @returns
      */
-    execute(statementName: string, parameters: any[], reject: (err: Error) => void, resolve: (res: any) => void): void;
+    executeStatement(statementName: string, parameters: any[], reject: (err: Error) => void, resolve: (res: any) => void): void;
     private waitForDrain;
     private readError;
     private stopReading;
@@ -171,3 +169,4 @@ export declare class PostgresClient extends EventEmitter {
     private readData;
     private startReading;
 }
+export {};

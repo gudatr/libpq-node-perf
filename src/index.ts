@@ -205,7 +205,7 @@ export class ClientConfig {
     ) { }
 }
 
-let Libpq = require('libpq');
+let Libpq = require("libpq");
 let typeParsers = require('pg-types');
 
 //Reduces the lookup time for the parser
@@ -221,9 +221,8 @@ for (let type in typeParsers.builtins) {
 const types = typesFlat;
 const NOTIFICATION = 'notification';
 
-export class PostgresClient extends EventEmitter {
+export class PostgresClient extends Libpq {
     private parse: (arg: number) => any;
-    private pq: any;
     private isReading = false;
     private resolveCallback = (rows: any) => { };
     private rejectCallback = (err: any) => { };
@@ -245,14 +244,14 @@ export class PostgresClient extends EventEmitter {
 
         if (this.prepared[queryName]) {
             return new Promise((resolve: (result: any[]) => void, reject) => {
-                this.execute(queryName, values, reject, resolve);
+                this.executeStatement(queryName, values, reject, resolve);
             });
         }
 
         return new Promise((resolve: (result: any[]) => void, reject) => {
-            this.prepare(queryName, text, values.length, reject, () => {
+            this.prepareStatement(queryName, text, values.length, reject, () => {
                 this.prepared[queryName] = true;
-                this.execute(queryName, values, reject, resolve);
+                this.executeStatement(queryName, values, reject, resolve);
             });
         });
     }
@@ -280,9 +279,7 @@ export class PostgresClient extends EventEmitter {
 
         this.parse = (valuesOnly ? this.parseArray : this.parseObject).bind(this);
 
-        this.pq = new Libpq();
-
-        this.pq.on('readable', this.readData.bind(this));
+        this.on('readable', this.readData.bind(this));
 
         this.on('newListener', (event: string) => {
             if (event !== NOTIFICATION) return;
@@ -291,8 +288,8 @@ export class PostgresClient extends EventEmitter {
     }
 
     private readValue(rowIndex: number, fieldIndex: number) {
-        let rawValue = this.pq.$getvalue(rowIndex, fieldIndex)
-        if (rawValue === '' && this.pq.$getisnull(rowIndex, fieldIndex)) return null
+        let rawValue = this.$getvalue(rowIndex, fieldIndex)
+        if (rawValue === '' && this.$getisnull(rowIndex, fieldIndex)) return null
         let parser = this.types[fieldIndex]
         if (parser) return parser(rawValue)
         return rawValue
@@ -315,13 +312,13 @@ export class PostgresClient extends EventEmitter {
     }
 
     private consumeFields() {
-        this.fieldCount = this.pq.$nfields()
+        this.fieldCount = this.$nfields()
         for (let x = 0; x < this.fieldCount; x++) {
-            this.names[x] = this.pq.$fname(x)
-            this.types[x] = types[this.pq.$ftype(x)]
+            this.names[x] = this.$fname(x)
+            this.types[x] = types[this.$ftype(x)]
         }
 
-        let tupleCount = this.pq.$ntuples()
+        let tupleCount = this.$ntuples()
         this.rows = new Array(tupleCount)
         for (let i = 0; i < tupleCount; i++) {
             this.rows[i] = this.parse(i);
@@ -337,13 +334,12 @@ export class PostgresClient extends EventEmitter {
     public connect(connectionString: string) {
         this.names = [];
         this.types = [];
-        this.pq.connectSync(connectionString);
-        if (!this.pq.$setNonBlocking(1)) throw new Error('Unable to set non-blocking to true');
+        if (!this.$connectSync(connectionString) || !this.$setNonBlocking(1)) throw new Error('Unable to set non-blocking to true');
     }
 
     private internalQuery(text: string, reject: (err: Error) => void, resolve: (res: any) => void) {
         this.stopReading();
-        if (!this.pq.$sendQuery(text)) return reject(new Error(this.pq.$getLastErrorMessage() || 'Something went wrong dispatching the query'));
+        if (!this.$sendQuery(text)) return reject(new Error(this.$getLastErrorMessage() || 'Something went wrong dispatching the query'));
         this.resolveCallback = resolve;
         this.rejectCallback = reject;
         this.waitForDrain();
@@ -355,9 +351,9 @@ export class PostgresClient extends EventEmitter {
      * @param cb 
      * @returns 
      */
-    prepare(statementName: string, text: string, nParams: number, reject: (err: Error) => void, resolve: (res: any) => void) {
+    prepareStatement(statementName: string, text: string, nParams: number, reject: (err: Error) => void, resolve: (res: any) => void) {
         this.stopReading();
-        if (!this.pq.$sendPrepare(statementName, text, nParams)) return reject(new Error(this.pq.$getLastErrorMessage() || 'Something went wrong dispatching the query'));
+        if (!this.$sendPrepare(statementName, text, nParams)) return reject(new Error(this.$getLastErrorMessage() || 'Something went wrong dispatching the query'));
         this.resolveCallback = resolve;
         this.rejectCallback = reject;
         this.waitForDrain();
@@ -369,36 +365,36 @@ export class PostgresClient extends EventEmitter {
      * @param cb 
      * @returns 
      */
-    execute(statementName: string, parameters: any[], reject: (err: Error) => void, resolve: (res: any) => void) {
+    executeStatement(statementName: string, parameters: any[], reject: (err: Error) => void, resolve: (res: any) => void) {
         this.stopReading();
-        if (!this.pq.$sendQueryPrepared(statementName, parameters)) return reject(new Error(this.pq.$getLastErrorMessage() || 'Something went wrong dispatching the query'));
+        if (!this.$sendQueryPrepared(statementName, parameters)) return reject(new Error(this.$getLastErrorMessage() || 'Something went wrong dispatching the query'));
         this.resolveCallback = resolve;
         this.rejectCallback = reject;
         this.waitForDrain();
     }
 
     private waitForDrain() {
-        let res = this.pq.$flush();
+        let res = this.$flush();
         // res of 0 is success
         if (res === 0) return this.startReading();
         // res of -1 is failure
-        if (res === -1) return this.rejectCallback(this.pq.$getLastErrorMessage());
+        if (res === -1) return this.rejectCallback(this.$getLastErrorMessage());
         // otherwise outgoing message didn't flush to socket, wait again
-        return this.pq.writable(this.waitForDrain)
+        return this.writable(this.waitForDrain)
     }
 
     private readError(message: string | undefined = undefined) {
-        this.emit('error', new Error(message || this.pq.$getLastErrorMessage()));
+        this.emit('error', new Error(message || this.$getLastErrorMessage()));
     }
 
     private stopReading() {
         if (!this.isReading) return;
         this.isReading = false;
-        this.pq.$stopRead();
+        this.$stopRead();
     }
 
     private emitResult(): string {
-        let status = this.pq.$resultStatus();
+        let status = this.$resultStatus();
         switch (status) {
             case 'PGRES_TUPLES_OK':
             case 'PGRES_COMMAND_OK':
@@ -406,7 +402,7 @@ export class PostgresClient extends EventEmitter {
                 this.consumeFields();
                 break;
             case 'PGRES_FATAL_ERROR':
-                this.error = new Error(this.pq.$resultErrorMessage());
+                this.error = new Error(this.$resultErrorMessage());
                 break;
             case 'PGRES_COPY_OUT':
             case 'PGRES_COPY_BOTH':
@@ -421,18 +417,18 @@ export class PostgresClient extends EventEmitter {
     private readData() {
         // read waiting data from the socket
         // e.g. clear the pending 'select'
-        if (!this.pq.$consumeInput()) {
+        if (!this.$consumeInput()) {
             // if consumeInput returns false a read error has been encountered
             return this.readError();
         }
 
         // check if there is still outstanding data and wait for it
-        if (this.pq.$isBusy()) {
+        if (this.$isBusy()) {
             return;
         }
 
         // load result object
-        while (this.pq.$getResult()) {
+        while (this.$getResult()) {
             let resultStatus = this.emitResult();
 
             // if the command initiated copy mode we need to break out of the read loop
@@ -441,7 +437,7 @@ export class PostgresClient extends EventEmitter {
 
             // if reading multiple results, sometimes the following results might cause
             // a blocking read. in this scenario yield back off the reader until libpq is readable
-            if (this.pq.$isBusy()) return;
+            if (this.$isBusy()) return;
         }
 
         if (this.error) {
@@ -456,6 +452,6 @@ export class PostgresClient extends EventEmitter {
     private startReading() {
         if (this.isReading) return
         this.isReading = true
-        this.pq.$startRead()
+        this.$startRead()
     }
 }

@@ -5,8 +5,8 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "dependencies": {
-    "pg-types": "4.0.1",
-    "libpq": "^1.8.10"
+    "libpq": "^1.8.10",
+    "pg-types": "4.0.1"
   },
   "repository": {
     "type": "git",

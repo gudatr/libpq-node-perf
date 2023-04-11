@@ -54,7 +54,7 @@ let pool = new Postgres({
         port: 5432,
         database: 'template1',
         schema: 'public',
-        socket: '/var/run/postgresql', 
+        socket: undefined, 
         password: '',
         threads: 10,
         queueSize: 65535,

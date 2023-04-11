@@ -24,7 +24,7 @@ export default class Postgres {
         this.queue = new Array(config.queueSize);
         this.queueSize = config.queueSize;
         this.escapeChar = config.escapeChar;
-        this.escapeRegex = new RegExp(this.escapeChar.replaceAll('\\', '\\\\') + "|_|%", "gi");
+        this.escapeRegex = new RegExp(this.escapeChar.replace(/\\/g, '\\\\') + "|_|%", "gi");
 
         this.escapeMatches = {
             [this.escapeChar]: this.escapeChar + this.escapeChar,

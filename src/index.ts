@@ -1,5 +1,3 @@
-import EventEmitter from "events";
-
 const EMPTY_FUNCTION = (_client: PostgresClient) => { };
 
 export default class Postgres {

@@ -5,7 +5,7 @@ export default class Postgres {
     private getPos;
     private putPos;
     private queue;
-    private queueSize;
+    private _queueSize;
     private connectionStack;
     private stackPosition;
     private escapeRegex;
@@ -15,6 +15,14 @@ export default class Postgres {
     private escapeArrayMatches;
     client: any;
     constructor(config: ClientConfig);
+    /**
+     * @returns the total size of the internal query queue
+     */
+    queueSize(): () => any;
+    /**
+     * @returns the size of the queue currently occupied by waiting queries
+     */
+    queueUsage(): number;
     /**
      * Initializes the pool with client instances and sets their search_path to the schema specified in the client config
      * Await this function to make sure your app doesn't query the pool before it is ready

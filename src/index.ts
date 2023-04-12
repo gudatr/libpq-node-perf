@@ -9,7 +9,7 @@ export default class Postgres {
     private getPos = 0;
     private putPos = 0;
     private queue: ((client: PostgresClient) => void)[];
-    private queueSize: number;
+    private _queueSize: number;
     private connectionStack: PostgresClient[] = [];
     private stackPosition = 0;
     private escapeRegex = /\\|_|%/gi;
@@ -22,8 +22,8 @@ export default class Postgres {
     public constructor(private config: ClientConfig) {
 
         this.queue = new Array(config.queueSize);
-        this.queueSize = config.queueSize;
-        this.escapeChar = config.escapeChar;
+        this._queueSize = config.queueSize ?? 200000;
+        this.escapeChar = config.escapeChar ?? '\\';
         this.escapeRegex = new RegExp(this.escapeChar.replace(/\\/g, '\\\\') + "|_|%", "gi");
 
         this.escapeMatches = {
@@ -44,6 +44,26 @@ export default class Postgres {
             this.connectionString = `postgresql://${config.user}@/${config.database}?host=${config.socket}`;
         }
 
+    }
+
+    /**
+     * @returns the total size of the internal query queue 
+     */
+    public queueSize() {
+        return this.queueSize;
+    }
+
+    /**
+     * @returns the size of the queue currently occupied by waiting queries 
+     */
+    public queueUsage() {
+        let diff = this.putPos - this.getPos;
+
+        if (this.getPos < this.putPos) {
+            return diff;
+        }
+
+        return this._queueSize + diff;
     }
 
     /**
@@ -83,7 +103,7 @@ export default class Postgres {
      */
     public connect(): Promise<PostgresClient> {
         return new Promise(async (resolve: (client: PostgresClient) => void) => {
-            if (++this.putPos >= this.queueSize) this.putPos = 0;
+            if (++this.putPos >= this._queueSize) this.putPos = 0;
             this.queue[this.putPos] = resolve;
             this.tick();
         });
@@ -121,7 +141,7 @@ export default class Postgres {
      */
     private tick() {
         while (this.stackPosition > -1 && this.getPos !== this.putPos) {
-            if (++this.getPos >= this.queueSize) this.getPos = 0;
+            if (++this.getPos >= this._queueSize) this.getPos = 0;
             let handler = this.queue[this.getPos];
             this.queue[this.getPos] = EMPTY_FUNCTION;
             handler(this.connectionStack[this.stackPosition--]);

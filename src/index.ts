@@ -1,3 +1,4 @@
+//Clear the queue using this value to free up used promises
 const EMPTY_FUNCTION = (_client: PostgresClient) => { };
 
 export default class Postgres {
@@ -57,9 +58,7 @@ export default class Postgres {
     public queueUsage() {
         let diff = this.putPos - this.getPos;
 
-        if (this.getPos < this.putPos) {
-            return diff;
-        }
+        if (this.getPos < this.putPos) return diff;
 
         return this._queueSize + diff;
     }
@@ -398,7 +397,9 @@ export class PostgresClient extends Libpq {
         // res of -1 is failure
         if (res === -1) return this.rejectCallback(this.$getLastErrorMessage());
         // otherwise outgoing message didn't flush to socket, wait again
-        return this.writable(this.waitForDrain)
+        this.$startWrite();
+
+        this.once('writable', this.waitForDrain);
     }
 
     private readError(message: string | undefined = undefined) {

@@ -351,7 +351,8 @@ export class PostgresClient extends Libpq {
     public connect(connectionString: string) {
         this.names = [];
         this.types = [];
-        if (!this.$connectSync(connectionString) || !this.$setNonBlocking(1)) throw new Error('Unable to set non-blocking to true');
+        if (!this.$connectSync(connectionString)) throw new Error(this.$getLastErrorMessage() || 'Unable to connect');
+        if (!this.$setNonBlocking(1)) throw new Error(this.$getLastErrorMessage() || 'Unable to set non blocking to true');
     }
 
     private internalQuery(text: string, reject: (err: Error) => void, resolve: (res: any) => void) {

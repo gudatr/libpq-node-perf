@@ -116,6 +116,7 @@ declare let Libpq: any;
 export declare class PostgresClient extends Libpq {
     private parentPool;
     private parse;
+    private consumeFields;
     private isReading;
     private resolveCallback;
     private rejectCallback;
@@ -147,7 +148,8 @@ export declare class PostgresClient extends Libpq {
     private readValue;
     private parseObject;
     private parseArray;
-    private consumeFields;
+    private consumeFieldsObject;
+    private consumeFieldsArray;
     /**
      * Attempts to connect using the provided connection string. Blocking.
      * @param connectionString

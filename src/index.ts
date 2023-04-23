@@ -240,6 +240,7 @@ const NOTIFICATION = 'notification';
 
 export class PostgresClient extends Libpq {
     private parse: (arg: number) => any;
+    private consumeFields: () => any;
     private isReading = false;
     private resolveCallback = (rows: any) => { };
     private rejectCallback = (err: any) => { };
@@ -295,6 +296,7 @@ export class PostgresClient extends Libpq {
         super();
 
         this.parse = (valuesOnly ? this.parseArray : this.parseObject).bind(this);
+        this.consumeFields = (valuesOnly ? this.consumeFieldsArray : this.consumeFieldsObject).bind(this);
 
         this.on('readable', this.readData.bind(this));
 
@@ -328,10 +330,23 @@ export class PostgresClient extends Libpq {
         return row;
     }
 
-    private consumeFields() {
+    private consumeFieldsObject() {
         this.fieldCount = this.$nfields()
         for (let x = 0; x < this.fieldCount; x++) {
             this.names[x] = this.$fname(x)
+            this.types[x] = types[this.$ftype(x)]
+        }
+
+        let tupleCount = this.$ntuples()
+        this.rows = new Array(tupleCount)
+        for (let i = 0; i < tupleCount; i++) {
+            this.rows[i] = this.parse(i);
+        }
+    }
+
+    private consumeFieldsArray() {
+        this.fieldCount = this.$nfields()
+        for (let x = 0; x < this.fieldCount; x++) {
             this.types[x] = types[this.$ftype(x)]
         }
 

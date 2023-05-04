@@ -11,7 +11,7 @@ export default class Postgres {
     private escapeRegex;
     private escapeMatches;
     private escapeChar;
-    private escapeArrayMatches;
+    private escapedApostrophe;
     client: any;
     constructor(config: ClientConfig);
     /**

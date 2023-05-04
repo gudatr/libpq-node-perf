@@ -31,12 +31,6 @@ export default class Postgres {
             "%": this.escapeChar + "%"
         };
 
-        this.escapeArrayMatches = {
-            "{": this.escapeChar + "{",
-            "}": this.escapeChar + "}",
-            '"': this.escapeChar + '"'
-        };
-
         if (!config.socket) {
             this.connectionString = `postgresql://${config.user}:${config.password ?? ''}@${config.host}:${config.port}/${config.database}`;
         } else {

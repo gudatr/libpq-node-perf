@@ -1,53 +1,5 @@
-const Client = require('pg-native')
+//Clear the queue using this value to free up used promises
 const EMPTY_FUNCTION = (_client: PostgresClient) => { };
-
-export class PostgresClient {
-
-    private prepared: { [Key: string]: number } = {};
-
-    constructor(private client: any, private parentPool: Postgres) { }
-
-    /**
-     * Execute a statement, prepare it if it has not been prepared already.
-     * @param queryName 
-     * @param text 
-     * @param values 
-     * @returns 
-     */
-    public query(queryName: string, text: string, values: any[]): Promise<any[]> {
-
-        if (this.prepared[queryName]) {
-            return new Promise((resolve: (result: any[]) => void, reject) => {
-                this.client.execute(queryName, values, reject, resolve);
-            });
-        }
-
-        return new Promise((resolve: (result: any[]) => void, reject) => {
-            this.client.prepare(queryName, text, values.length, reject, () => {
-                this.prepared[queryName] = 1;
-                this.client.execute(queryName, values, reject, resolve);
-            });
-        });
-    }
-
-    /**
-     * Query a string directly. Useful for starting transactions, etc.
-     * @param query 
-     * @returns 
-     */
-    public queryString(query: string): Promise<any[]> {
-        return new Promise((resolve: (result: any[]) => void, reject) => {
-            this.client.query(query, reject, resolve);
-        });
-    }
-
-    /**
-     * Release the client back into the pool
-     */
-    public release() {
-        this.parentPool.release(this);
-    }
-}
 
 export default class Postgres {
     private connectionString: string;
@@ -56,6 +8,7 @@ export default class Postgres {
     private getPos = 0;
     private putPos = 0;
     private queue: ((client: PostgresClient) => void)[];
+    private _queueSize: number;
     private connectionStack: PostgresClient[] = [];
     private stackPosition = 0;
     private escapeRegex = /\\|_|%/gi;
@@ -67,8 +20,9 @@ export default class Postgres {
     public constructor(private config: ClientConfig) {
 
         this.queue = new Array(config.queueSize);
-        this.escapeChar = config.escapeChar;
-        this.escapeRegex = new RegExp(this.escapeChar.replaceAll('\\', '\\\\') + "|_|%", "gi");
+        this._queueSize = config.queueSize ?? 200000;
+        this.escapeChar = config.escapeChar ?? '\\';
+        this.escapeRegex = new RegExp(this.escapeChar.replace(/\\/g, '\\\\') + "|_|%", "gi");
 
         this.escapeMatches = {
             [this.escapeChar]: this.escapeChar + this.escapeChar,
@@ -91,22 +45,34 @@ export default class Postgres {
     }
 
     /**
+     * @returns the total size of the internal query queue 
+     */
+    public queueSize() {
+        return this.queueSize;
+    }
+
+    /**
+     * @returns the size of the queue currently occupied by waiting queries 
+     */
+    public queueUsage() {
+        let diff = this.putPos - this.getPos;
+
+        if (this.getPos < this.putPos) return diff;
+
+        return this._queueSize + diff;
+    }
+
+    /**
      * Initializes the pool with client instances and sets their search_path to the schema specified in the client config
      * Await this function to make sure your app doesn't query the pool before it is ready
      */
     public async initialize() {
         for (let i = 0; i < this.config.threads; i++) {
-            let client = Client(this.config.valuesOnly);
+            let client = this.connectionStack[i] = new PostgresClient(this.config.valuesOnly, this);
 
-            client.connect(this.connectionString, (err: any) => {
-                if (err) throw err;
-            });
+            client.connect(this.connectionString);
 
-            await new Promise((resolve: (result: any[]) => void, reject) => {
-                client.query(`SET search_path TO ${this.config.schema}`, reject, resolve);
-            });
-
-            this.connectionStack[i] = new PostgresClient(client, this);
+            await client.queryString(`SET search_path TO ${this.config.schema}`);
         }
         this.stackPosition = this.config.threads - 1;
     }
@@ -128,12 +94,13 @@ export default class Postgres {
     }
 
     /**
-     * Grab a client from the pool or wait until one is freed and the internal tick is called
+     * Grab a client from the pool or wait until one becomes available and the internal tick is called
      * @returns 
      */
     public connect(): Promise<PostgresClient> {
         return new Promise(async (resolve: (client: PostgresClient) => void) => {
-            this.queue[++this.putPos >= this.queue.length ? this.putPos = 0 : this.putPos] = resolve;
+            if (++this.putPos >= this._queueSize) this.putPos = 0;
+            this.queue[this.putPos] = resolve;
             this.tick();
         });
     }
@@ -170,7 +137,8 @@ export default class Postgres {
      */
     private tick() {
         while (this.stackPosition > -1 && this.getPos !== this.putPos) {
-            let handler = this.queue[++this.getPos >= this.queue.length ? this.getPos = 0 : this.getPos];
+            if (++this.getPos >= this._queueSize) this.getPos = 0;
+            let handler = this.queue[this.getPos];
             this.queue[this.getPos] = EMPTY_FUNCTION;
             handler(this.connectionStack[this.stackPosition--]);
         }
@@ -250,4 +218,273 @@ export class ClientConfig {
         public escapeChar: string = '\\',
         public valuesOnly: boolean = false
     ) { }
+}
+
+let Libpq = require("libpq");
+let typeParsers = require('pg-types');
+
+//Reduces the lookup time for the parser
+let typesFlat = [];
+
+for (let type in typeParsers.builtins) {
+    let parser = typeParsers.getTypeParser(type, 'text');
+    let parserId = typeParsers.builtins[type];
+
+    typesFlat[parserId] = parser;
+}
+
+const types = typesFlat;
+const NOTIFICATION = 'notification';
+
+export class PostgresClient extends Libpq {
+    private parse: (arg: number) => any;
+    private consumeFields: () => any;
+    private isReading = false;
+    private resolveCallback = (rows: any) => { };
+    private rejectCallback = (err: any) => { };
+    private error: Error | undefined = undefined;
+    private fieldCount = 0;
+    private names: string[] = [];
+    private types: any[] = [];
+    private rows: any[] = [];
+    private prepared: { [Key: string]: boolean } = {};
+
+    /**
+     * Execute a statement, prepare it if it has not been prepared already.
+     * @param queryName 
+     * @param text 
+     * @param values 
+     * @returns 
+     */
+    public query(queryName: string, text: string, values: any[]): Promise<any[]> {
+
+        if (this.prepared[queryName]) {
+            return new Promise((resolve: (result: any[]) => void, reject) => {
+                this.executeStatement(queryName, values, reject, resolve);
+            });
+        }
+
+        return new Promise((resolve: (result: any[]) => void, reject) => {
+            this.prepareStatement(queryName, text, values.length, reject, () => {
+                this.prepared[queryName] = true;
+                this.executeStatement(queryName, values, reject, resolve);
+            });
+        });
+    }
+
+    /**
+     * Query a string directly. Useful for starting transactions, etc.
+     * @param query 
+     * @returns 
+     */
+    public queryString(query: string): Promise<any[]> {
+        return new Promise((resolve, reject) => {
+            this.internalQuery(query, reject, resolve);
+        });
+    }
+
+    /**
+     * Release the client back into the pool
+     */
+    public release() {
+        this.parentPool.release(this);
+    }
+
+    constructor(valuesOnly: boolean = false, private parentPool: Postgres) {
+        super();
+
+        this.parse = (valuesOnly ? this.parseArray : this.parseObject).bind(this);
+        this.consumeFields = (valuesOnly ? this.consumeFieldsArray : this.consumeFieldsObject).bind(this);
+
+        this.on('readable', this.readData.bind(this));
+
+        this.on('newListener', (event: string) => {
+            if (event !== NOTIFICATION) return;
+            this.startReading()
+        })
+    }
+
+    private readValue(rowIndex: number, fieldIndex: number) {
+        let rawValue = this.$getvalue(rowIndex, fieldIndex)
+        if (rawValue === '' && this.$getisnull(rowIndex, fieldIndex)) return null
+        let parser = this.types[fieldIndex]
+        if (parser) return parser(rawValue)
+        return rawValue
+    }
+
+    private parseObject(rowIndex: number) {
+        let row: any = {};
+        for (let fieldIndex = 0; fieldIndex < this.fieldCount; fieldIndex++) {
+            row[this.names[fieldIndex]] = this.readValue(rowIndex, fieldIndex)
+        }
+        return row;
+    }
+
+    private parseArray(rowIndex: number) {
+        let row = new Array(this.fieldCount);
+        for (let fieldIndex = 0; fieldIndex < this.fieldCount; fieldIndex++) {
+            row[fieldIndex] = this.readValue(rowIndex, fieldIndex);
+        }
+        return row;
+    }
+
+    private consumeFieldsObject() {
+        this.fieldCount = this.$nfields()
+        for (let x = 0; x < this.fieldCount; x++) {
+            this.names[x] = this.$fname(x)
+            this.types[x] = types[this.$ftype(x)]
+        }
+
+        let tupleCount = this.$ntuples()
+        this.rows = new Array(tupleCount)
+        for (let i = 0; i < tupleCount; i++) {
+            this.rows[i] = this.parse(i);
+        }
+    }
+
+    private consumeFieldsArray() {
+        this.fieldCount = this.$nfields()
+        for (let x = 0; x < this.fieldCount; x++) {
+            this.types[x] = types[this.$ftype(x)]
+        }
+
+        let tupleCount = this.$ntuples()
+        this.rows = new Array(tupleCount)
+        for (let i = 0; i < tupleCount; i++) {
+            this.rows[i] = this.parse(i);
+        }
+    }
+
+    /**
+     * Attempts to connect using the provided connection string. Blocking.
+     * @param connectionString 
+     * @param cb 
+     * @returns 
+     */
+    public connect(connectionString: string) {
+        this.names = [];
+        this.types = [];
+        if (!this.$connectSync(connectionString)) throw new Error(this.$getLastErrorMessage() || 'Unable to connect');
+        if (!this.$setNonBlocking(1)) throw new Error(this.$getLastErrorMessage() || 'Unable to set non blocking to true');
+    }
+
+    private internalQuery(text: string, reject: (err: Error) => void, resolve: (res: any) => void) {
+        this.stopReading();
+        if (!this.$sendQuery(text)) return reject(new Error(this.$getLastErrorMessage() || 'Something went wrong dispatching the query'));
+        this.resolveCallback = resolve;
+        this.rejectCallback = reject;
+        this.waitForDrain();
+    }
+
+    /**
+     * Prepares a statement, calls reject on fail, resolve on success
+     * @param connectionString 
+     * @param cb 
+     * @returns 
+     */
+    prepareStatement(statementName: string, text: string, nParams: number, reject: (err: Error) => void, resolve: (res: any) => void) {
+        this.stopReading();
+        if (!this.$sendPrepare(statementName, text, nParams)) return reject(new Error(this.$getLastErrorMessage() || 'Something went wrong dispatching the query'));
+        this.resolveCallback = resolve;
+        this.rejectCallback = reject;
+        this.waitForDrain();
+    }
+
+    /**
+     * Executes a prepared statement, calls reject on fail, resolve on success
+     * @param connectionString 
+     * @param cb 
+     * @returns 
+     */
+    executeStatement(statementName: string, parameters: any[], reject: (err: Error) => void, resolve: (res: any) => void) {
+        this.stopReading();
+        if (!this.$sendQueryPrepared(statementName, parameters)) return reject(new Error(this.$getLastErrorMessage() || 'Something went wrong dispatching the query'));
+        this.resolveCallback = resolve;
+        this.rejectCallback = reject;
+        this.waitForDrain();
+    }
+
+    private waitForDrain() {
+        let res = this.$flush();
+        // res of 0 is success
+        if (res === 0) return this.startReading();
+        // res of -1 is failure
+        if (res === -1) return this.rejectCallback(this.$getLastErrorMessage());
+        // otherwise outgoing message didn't flush to socket, wait again
+        this.$startWrite();
+
+        this.once('writable', this.waitForDrain);
+    }
+
+    private readError(message: string | undefined = undefined) {
+        this.emit('error', new Error(message || this.$getLastErrorMessage()));
+    }
+
+    private stopReading() {
+        if (!this.isReading) return;
+        this.isReading = false;
+        this.$stopRead();
+    }
+
+    private emitResult(): string {
+        let status = this.$resultStatus();
+        switch (status) {
+            case 'PGRES_TUPLES_OK':
+            case 'PGRES_COMMAND_OK':
+            case 'PGRES_EMPTY_QUERY':
+                this.consumeFields();
+                break;
+            case 'PGRES_FATAL_ERROR':
+                this.error = new Error(this.$resultErrorMessage());
+                break;
+            case 'PGRES_COPY_OUT':
+            case 'PGRES_COPY_BOTH':
+                break;
+            default:
+                this.readError('unrecognized command status: ' + status);
+                break;
+        }
+        return status;
+    }
+
+    private readData() {
+        // read waiting data from the socket
+        // e.g. clear the pending 'select'
+        if (!this.$consumeInput()) {
+            // if consumeInput returns false a read error has been encountered
+            return this.readError();
+        }
+
+        // check if there is still outstanding data and wait for it
+        if (this.$isBusy()) {
+            return;
+        }
+
+        // load result object
+        while (this.$getResult()) {
+            let resultStatus = this.emitResult();
+
+            // if the command initiated copy mode we need to break out of the read loop
+            // so a substream can begin to read copy data
+            if (resultStatus === 'PGRES_COPY_BOTH' || resultStatus === 'PGRES_COPY_OUT') break;
+
+            // if reading multiple results, sometimes the following results might cause
+            // a blocking read. in this scenario yield back off the reader until libpq is readable
+            if (this.$isBusy()) return;
+        }
+
+        if (this.error) {
+            let err = this.error;
+            this.error = undefined;
+            return this.rejectCallback(err);
+        }
+
+        this.resolveCallback(this.rows);
+    }
+
+    private startReading() {
+        if (this.isReading) return
+        this.isReading = true
+        this.$startRead()
+    }
 }

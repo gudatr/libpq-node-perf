@@ -1,27 +1,3 @@
-export declare class PostgresClient {
-    private client;
-    private parentPool;
-    private prepared;
-    constructor(client: any, parentPool: Postgres);
-    /**
-     * Execute a statement, prepare it if it has not been prepared already.
-     * @param queryName
-     * @param text
-     * @param values
-     * @returns
-     */
-    query(queryName: string, text: string, values: any[]): Promise<any[]>;
-    /**
-     * Query a string directly. Useful for starting transactions, etc.
-     * @param query
-     * @returns
-     */
-    queryString(query: string): Promise<any[]>;
-    /**
-     * Release the client back into the pool
-     */
-    release(): void;
-}
 export default class Postgres {
     private config;
     private connectionString;
@@ -29,6 +5,7 @@ export default class Postgres {
     private getPos;
     private putPos;
     private queue;
+    private _queueSize;
     private connectionStack;
     private stackPosition;
     private escapeRegex;
@@ -37,6 +14,14 @@ export default class Postgres {
     private escapeArrayMatches;
     client: any;
     constructor(config: ClientConfig);
+    /**
+     * @returns the total size of the internal query queue
+     */
+    queueSize(): () => any;
+    /**
+     * @returns the size of the queue currently occupied by waiting queries
+     */
+    queueUsage(): number;
     /**
      * Initializes the pool with client instances and sets their search_path to the schema specified in the client config
      * Await this function to make sure your app doesn't query the pool before it is ready
@@ -51,7 +36,7 @@ export default class Postgres {
      */
     query(name: string, text: string, values: any[]): Promise<any[]>;
     /**
-     * Grab a client from the pool or wait until one is freed and the internal tick is called
+     * Grab a client from the pool or wait until one becomes available and the internal tick is called
      * @returns
      */
     connect(): Promise<PostgresClient>;
@@ -126,3 +111,71 @@ export declare class ClientConfig {
     valuesOnly: boolean;
     constructor(user: string, host: string, port: number, database: string, schema: string, socket: string | undefined, password: string | undefined, threads?: number, queueSize?: number, escapeChar?: string, valuesOnly?: boolean);
 }
+declare let Libpq: any;
+export declare class PostgresClient extends Libpq {
+    private parentPool;
+    private parse;
+    private consumeFields;
+    private isReading;
+    private resolveCallback;
+    private rejectCallback;
+    private error;
+    private fieldCount;
+    private names;
+    private types;
+    private rows;
+    private prepared;
+    /**
+     * Execute a statement, prepare it if it has not been prepared already.
+     * @param queryName
+     * @param text
+     * @param values
+     * @returns
+     */
+    query(queryName: string, text: string, values: any[]): Promise<any[]>;
+    /**
+     * Query a string directly. Useful for starting transactions, etc.
+     * @param query
+     * @returns
+     */
+    queryString(query: string): Promise<any[]>;
+    /**
+     * Release the client back into the pool
+     */
+    release(): void;
+    constructor(valuesOnly: boolean | undefined, parentPool: Postgres);
+    private readValue;
+    private parseObject;
+    private parseArray;
+    private consumeFieldsObject;
+    private consumeFieldsArray;
+    /**
+     * Attempts to connect using the provided connection string. Blocking.
+     * @param connectionString
+     * @param cb
+     * @returns
+     */
+    connect(connectionString: string): void;
+    private internalQuery;
+    /**
+     * Prepares a statement, calls reject on fail, resolve on success
+     * @param connectionString
+     * @param cb
+     * @returns
+     */
+    prepareStatement(statementName: string, text: string, nParams: number, reject: (err: Error) => void, resolve: (res: any) => void): void;
+    /**
+     * Executes a prepared statement, calls reject on fail, resolve on success
+     * @param connectionString
+     * @param cb
+     * @returns
+     */
+    executeStatement(statementName: string, parameters: any[], reject: (err: Error) => void, resolve: (res: any) => void): void;
+    private waitForDrain;
+    private readError;
+    private stopReading;
+    private emitResult;
+    private readData;
+    private startReading;
+}
+export {};

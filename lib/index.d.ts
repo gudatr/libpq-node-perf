@@ -34,7 +34,6 @@ export default class Postgres {
     private escapeRegex;
     private escapeMatches;
     private escapeChar;
-    private escapeArrayRegex;
     private escapeArrayMatches;
     client: any;
     constructor(config: ClientConfig);

@@ -61,7 +61,6 @@ export default class Postgres {
     private escapeRegex = /\\|_|%/gi;
     private escapeMatches: { [Key: string]: string } = {};
     private escapeChar: string;
-    private escapeArrayRegex = /{|}|"/gi;
     private escapeArrayMatches: { [Key: string]: string } = {};
     client: any;
 
@@ -192,7 +191,7 @@ export default class Postgres {
     * @returns string
     */
     public transformArray(array: (number[] | boolean[])): string {
-        return '{' + array.join(',') + '}';
+        return '{' + array + '}';
     }
 
     /**
@@ -201,12 +200,11 @@ export default class Postgres {
     * @returns string
     */
     public transformStringArray(array: (string[])): string {
+        let escapedApostrophe = this.escapeChar + "'";
         for (let i = 0; i < array.length; i++) {
-            array[i] = '"' + array[i].replace(this.escapeArrayRegex, (matched) => {
-                return this.escapeArrayMatches[matched];
-            }) + '"';
+            array[i] = array[i].replaceAll("'", escapedApostrophe);
         }
-        return '{' + array.join(',') + '}';
+        return "{'" + array.join("','") + "'}";
     }
 
     /**

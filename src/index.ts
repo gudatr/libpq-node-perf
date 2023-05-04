@@ -14,7 +14,7 @@ export default class Postgres {
     private escapeRegex = /\\|_|%/gi;
     private escapeMatches: { [Key: string]: string } = {};
     private escapeChar: string;
-    private escapeArrayMatches: { [Key: string]: string } = {};
+    private escapedApostrophe: string;
     client: any;
 
     public constructor(private config: ClientConfig) {
@@ -22,6 +22,7 @@ export default class Postgres {
         this.queue = new Array(config.queueSize);
         this._queueSize = config.queueSize ?? 200000;
         this.escapeChar = config.escapeChar ?? '\\';
+        this.escapedApostrophe = this.escapeChar + "'";
         this.escapeRegex = new RegExp(this.escapeChar.replace(/\\/g, '\\\\') + "|_|%", "gi");
 
         this.escapeMatches = {
@@ -168,9 +169,8 @@ export default class Postgres {
     * @returns string
     */
     public transformStringArray(array: (string[])): string {
-        let escapedApostrophe = this.escapeChar + "'";
         for (let i = 0; i < array.length; i++) {
-            array[i] = array[i].replaceAll("'", escapedApostrophe);
+            array[i] = array[i].replace(/'/g, this.escapedApostrophe);
         }
         return "{'" + array.join("','") + "'}";
     }

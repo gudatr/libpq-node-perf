@@ -28,6 +28,11 @@ export default class Postgres {
      */
     initialize(): Promise<void>;
     /**
+     * Grab a client from the pool or wait until one becomes available and the internal tick is called
+     * @returns
+     */
+    connect(): Promise<PostgresClient>;
+    /**
      * Get a client from the pool, execute the query and return it afterwards (even if there is an error)
      * @param name
      * @param text
@@ -36,16 +41,25 @@ export default class Postgres {
      */
     query(name: string, text: string, values: any[]): Promise<any[]>;
     /**
-     * Grab a client from the pool or wait until one becomes available and the internal tick is called
-     * @returns
-     */
-    connect(): Promise<PostgresClient>;
-    /**
      * Query a string directly. Do not use it for transactions as it does pick the next available client for the query
      * @param query
      * @returns
      */
     queryString(query: string): Promise<any[]>;
+    /**
+     * Get a client from the pool, execute the query and return the affected row count
+     * @param name
+     * @param text
+     * @param values
+     * @returns
+     */
+    queryCount(name: string, text: string, values: any[]): Promise<number>;
+    /**
+     * Query a string directly and return the affected row count
+     * @param query
+     * @returns
+     */
+    queryStringCount(query: string): Promise<number>;
     /**
      * Release a client back into the pool for queries
      * @param client
@@ -124,6 +138,7 @@ export declare class PostgresClient extends Libpq {
     private names;
     private types;
     private rows;
+    private count;
     private prepared;
     /**
      * Execute a statement, prepare it if it has not been prepared already.
@@ -139,6 +154,20 @@ export declare class PostgresClient extends Libpq {
      * @returns
      */
     queryString(query: string): Promise<any[]>;
+    /**
+     * Execute a statement, prepare it if it has not been prepared already and return affected row count
+     * @param queryName
+     * @param text
+     * @param values
+     * @returns affected row count
+     */
+    queryCount(queryName: string, text: string, values: any[]): Promise<number>;
+    /**
+     * Query a string directly and return the affected row count
+     * @param query
+     * @returns affected row count
+     */
+    queryStringCount(query: string): Promise<number>;
     /**
      * Release the client back into the pool
      */

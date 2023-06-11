@@ -73,6 +73,18 @@ export default class Postgres {
     }
 
     /**
+     * Grab a client from the pool or wait until one becomes available and the internal tick is called
+     * @returns 
+     */
+    public connect(): Promise<PostgresClient> {
+        return new Promise(async (resolve: (client: PostgresClient) => void) => {
+            if (++this.putPos >= this._queueSize) this.putPos = 0;
+            this.queue[this.putPos] = resolve;
+            this.tick();
+        });
+    }
+
+    /**
      * Get a client from the pool, execute the query and return it afterwards (even if there is an error)
      * @param name 
      * @param text 
@@ -89,33 +101,47 @@ export default class Postgres {
     }
 
     /**
-     * Grab a client from the pool or wait until one becomes available and the internal tick is called
-     * @returns 
-     */
-    public connect(): Promise<PostgresClient> {
-        return new Promise(async (resolve: (client: PostgresClient) => void) => {
-            if (++this.putPos >= this._queueSize) this.putPos = 0;
-            this.queue[this.putPos] = resolve;
-            this.tick();
-        });
-    }
-
-    /**
      * Query a string directly. Do not use it for transactions as it does pick the next available client for the query
      * @param query 
      * @returns 
      */
-    public queryString(query: string): Promise<any[]> {
-        return new Promise(async (resolve: (result: any[]) => void, reject) => {
-            let client = await this.connect();
-            try {
-                resolve(await client.queryString(query));
-            } catch (err) {
-                reject(err);
-            } finally {
-                this.release(client);
-            }
-        });
+    public async queryString(query: string): Promise<any[]> {
+        let client = await this.connect();
+        try {
+            return await client.queryString(query);
+        } finally {
+            this.release(client);
+        }
+    }
+
+    /**
+     * Get a client from the pool, execute the query and return the affected row count
+     * @param name 
+     * @param text 
+     * @param values 
+     * @returns 
+     */
+    public async queryCount(name: string, text: string, values: any[]) {
+        let client = await this.connect();
+        try {
+            return await client.queryCount(name, text, values);
+        } finally {
+            this.release(client);
+        }
+    }
+
+    /**
+     * Query a string directly and return the affected row count
+     * @param query 
+     * @returns 
+     */
+    public async queryStringCount(query: string): Promise<number> {
+        let client = await this.connect();
+        try {
+            return await client.queryStringCount(query);
+        } finally {
+            this.release(client);
+        }
     }
 
     /**
@@ -241,6 +267,7 @@ export class PostgresClient extends Libpq {
     private names: string[] = [];
     private types: any[] = [];
     private rows: any[] = [];
+    private count: boolean = false;
     private prepared: { [Key: string]: boolean } = {};
 
     /**
@@ -275,6 +302,28 @@ export class PostgresClient extends Libpq {
         return new Promise((resolve, reject) => {
             this.internalQuery(query, reject, resolve);
         });
+    }
+
+    /**
+     * Execute a statement, prepare it if it has not been prepared already and return affected row count
+     * @param queryName 
+     * @param text 
+     * @param values 
+     * @returns affected row count 
+     */
+    public async queryCount(queryName: string, text: string, values: any[]): Promise<number> {
+        this.count = true;
+        return await this.query(queryName, text, values) as any;
+    }
+
+    /**
+     * Query a string directly and return the affected row count
+     * @param query 
+     * @returns affected row count
+     */
+    public async queryStringCount(query: string): Promise<number> {
+        this.count = true;
+        return await this.queryString(query) as any;
     }
 
     /**
@@ -426,7 +475,12 @@ export class PostgresClient extends Libpq {
             case 'PGRES_TUPLES_OK':
             case 'PGRES_COMMAND_OK':
             case 'PGRES_EMPTY_QUERY':
-                this.consumeFields();
+                if (this.count) {
+                    this.count = false;
+                    this.rows = +this.$cmdTuples() as any;
+                } else {
+                    this.consumeFields();
+                }
                 break;
             case 'PGRES_FATAL_ERROR':
                 this.error = new Error(this.$resultErrorMessage());
@@ -475,6 +529,8 @@ export class PostgresClient extends Libpq {
 
         this.resolveCallback(this.rows);
     }
+
+
 
     private startReading() {
         if (this.isReading) return

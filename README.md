@@ -61,7 +61,6 @@ let pool = new Postgres({
         port: 5432,
         database: 'template1',
         schema: 'public',
-        socket: '/var/run/postgresql/', 
         password: '',
         threads: 10,
         queueSize: 200000,
@@ -90,6 +89,10 @@ Note: You do not have to supply a parameter, an empty [] array will do then
 ```javascript
 let players: Player[] = await pool.queryString("SELECT * FROM players");
 ```
+
+### Affected rows
+
+Using the function queryCount and queryStringCount you can, instead of making the client parse a query result, simply get the number of affected rows.
 
 ### Transactions
 

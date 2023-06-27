@@ -19,7 +19,7 @@ export default class Postgres {
 
     public constructor(private config: ClientConfig) {
 
-        this.queue = new Array(config.queueSize);
+        this.queue = [];
         this._queueSize = config.queueSize ?? 200000;
         this.escapeChar = config.escapeChar ?? '\\';
         this.escapedApostrophe = this.escapeChar + "'";
@@ -315,6 +315,7 @@ export class PostgresClient extends Libpq {
             this.fieldCount = -1;
             this.names = this.namesNonPrepared;
             this.types = this.typesNonPrepared;
+            this.statementName = '';
             this.internalQuery(query, reject, resolve);
         });
     }
@@ -497,22 +498,24 @@ export class PostgresClient extends Libpq {
                 if (this.count) {
                     this.count = false;
                     this.rows = +this.$cmdTuples() as any;
-                } else {
-                    if (this.fieldCount === -1) {
-
-                        this.getResultInfo();
-
-                        if (this.statementName !== '') {
-                            this.prepared[this.statementName] = {
-                                fieldCount: this.fieldCount,
-                                names: this.names,
-                                types: this.types
-                            };
-                        }
-                    }
-
-                    this.consumeFields();
+                    break;
                 }
+
+                if (this.fieldCount === -1) {
+
+                    this.getResultInfo();
+
+                    if (this.statementName !== '') {
+                        this.prepared[this.statementName] = {
+                            fieldCount: this.fieldCount,
+                            names: this.names,
+                            types: this.types
+                        };
+                    }
+                }
+
+                this.consumeFields();
+
                 break;
             case 'PGRES_FATAL_ERROR':
                 this.error = new Error(this.$resultErrorMessage());

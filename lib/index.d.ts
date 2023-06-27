@@ -135,11 +135,14 @@ export declare class PostgresClient extends Libpq {
     private rejectCallback;
     private error;
     private fieldCount;
+    private statementName;
     private names;
     private types;
     private rows;
     private count;
     private prepared;
+    private namesNonPrepared;
+    private typesNonPrepared;
     /**
      * Execute a statement, prepare it if it has not been prepared already.
      * @param queryName
@@ -172,7 +175,7 @@ export declare class PostgresClient extends Libpq {
      * Release the client back into the pool
      */
     release(): void;
-    constructor(valuesOnly: boolean | undefined, parentPool: Postgres);
+    constructor(valuesOnly: boolean, parentPool: Postgres);
     private readValue;
     private parseObject;
     private parseArray;
@@ -203,6 +206,7 @@ export declare class PostgresClient extends Libpq {
     private waitForDrain;
     private readError;
     private stopReading;
+    private getResultInfo;
     private emitResult;
     private readData;
     private startReading;

@@ -67,8 +67,7 @@ let pool = new Postgres({
         threads: 10,
         queueSize: 200000,
         escapeChar: '\\',
-        valuesOnly: false,
-        alwaysLoadResultInfo: false
+        valuesOnly: false
 });
 
 await pool.initialize();

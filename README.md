@@ -2,6 +2,7 @@
 A simple pool implementation for postgresql with lightweight client code and helper functions.
 Pooling is done automatically but it allows you to take control for transactions.
 Since v1.2.0 the client is merely a single layer on top of the native bindings to libpq.
+Since v1.3.0 the client skips column name and type parsing for prepared queries.
 
 ## Installation
 
@@ -61,11 +62,13 @@ let pool = new Postgres({
         port: 5432,
         database: 'template1',
         schema: 'public',
+        socket: '/var/run/postgresql/',
         password: '',
         threads: 10,
         queueSize: 200000,
         escapeChar: '\\',
-        valuesOnly: false
+        valuesOnly: false,
+        alwaysLoadResultInfo: false
 });
 
 await pool.initialize();

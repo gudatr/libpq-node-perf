@@ -264,11 +264,15 @@ export class PostgresClient extends Libpq {
     private rejectCallback = (err: any) => { };
     private error: Error | undefined = undefined;
     private fieldCount = 0;
+    private statementName = '';
     private names: string[] = [];
     private types: any[] = [];
     private rows: any[] = [];
     private count: boolean = false;
-    private prepared: { [Key: string]: boolean } = {};
+    private prepared: { [Key: string]: ResultInfo } = {};
+
+    private namesNonPrepared: string[] = [];
+    private typesNonPrepared: any[] = [];
 
     /**
      * Execute a statement, prepare it if it has not been prepared already.
@@ -279,17 +283,25 @@ export class PostgresClient extends Libpq {
      */
     public query(queryName: string, text: string, values: any[]): Promise<any[]> {
 
-        if (this.prepared[queryName]) {
+        let preparedInfo = this.prepared[queryName];
+
+        if (preparedInfo === undefined) {
             return new Promise((resolve: (result: any[]) => void, reject) => {
-                this.executeStatement(queryName, values, reject, resolve);
+                this.prepareStatement(queryName, text, values.length, reject, () => {
+                    this.fieldCount = -1;
+                    this.names = [];
+                    this.types = [];
+                    this.statementName = queryName;
+                    this.executeStatement(queryName, values, reject, resolve);
+                });
             });
         }
 
         return new Promise((resolve: (result: any[]) => void, reject) => {
-            this.prepareStatement(queryName, text, values.length, reject, () => {
-                this.prepared[queryName] = true;
-                this.executeStatement(queryName, values, reject, resolve);
-            });
+            this.fieldCount = preparedInfo.fieldCount;
+            this.names = preparedInfo.names;
+            this.types = preparedInfo.types;
+            this.executeStatement(queryName, values, reject, resolve);
         });
     }
 
@@ -300,6 +312,9 @@ export class PostgresClient extends Libpq {
      */
     public queryString(query: string): Promise<any[]> {
         return new Promise((resolve, reject) => {
+            this.fieldCount = -1;
+            this.names = this.namesNonPrepared;
+            this.types = this.typesNonPrepared;
             this.internalQuery(query, reject, resolve);
         });
     }
@@ -333,7 +348,7 @@ export class PostgresClient extends Libpq {
         this.parentPool.release(this);
     }
 
-    constructor(valuesOnly: boolean = false, private parentPool: Postgres) {
+    constructor(valuesOnly: boolean, private parentPool: Postgres) {
         super();
 
         this.parse = (valuesOnly ? this.parseArray : this.parseObject).bind(this);
@@ -348,11 +363,9 @@ export class PostgresClient extends Libpq {
     }
 
     private readValue(rowIndex: number, fieldIndex: number) {
-        let rawValue = this.$getvalue(rowIndex, fieldIndex)
-        if (rawValue === '' && this.$getisnull(rowIndex, fieldIndex)) return null
-        let parser = this.types[fieldIndex]
-        if (parser) return parser(rawValue)
-        return rawValue
+        let rawValue = this.$getvalue(rowIndex, fieldIndex);
+        if (rawValue === '' && this.$getisnull(rowIndex, fieldIndex)) return null;
+        return this.types[fieldIndex](rawValue);
     }
 
     private parseObject(rowIndex: number) {
@@ -364,7 +377,7 @@ export class PostgresClient extends Libpq {
     }
 
     private parseArray(rowIndex: number) {
-        let row = new Array(this.fieldCount);
+        let row = [];
         for (let fieldIndex = 0; fieldIndex < this.fieldCount; fieldIndex++) {
             row[fieldIndex] = this.readValue(rowIndex, fieldIndex);
         }
@@ -372,27 +385,16 @@ export class PostgresClient extends Libpq {
     }
 
     private consumeFieldsObject() {
-        this.fieldCount = this.$nfields()
-        for (let x = 0; x < this.fieldCount; x++) {
-            this.names[x] = this.$fname(x)
-            this.types[x] = types[this.$ftype(x)]
-        }
-
         let tupleCount = this.$ntuples()
-        this.rows = new Array(tupleCount)
+        this.rows = [];
         for (let i = 0; i < tupleCount; i++) {
             this.rows[i] = this.parse(i);
         }
     }
 
     private consumeFieldsArray() {
-        this.fieldCount = this.$nfields()
-        for (let x = 0; x < this.fieldCount; x++) {
-            this.types[x] = types[this.$ftype(x)]
-        }
-
         let tupleCount = this.$ntuples()
-        this.rows = new Array(tupleCount)
+        this.rows = [];
         for (let i = 0; i < tupleCount; i++) {
             this.rows[i] = this.parse(i);
         }
@@ -469,6 +471,23 @@ export class PostgresClient extends Libpq {
         this.$stopRead();
     }
 
+    private getResultInfo() {
+        this.fieldCount = this.$nfields();
+
+        for (let x = 0; x < this.fieldCount; x++) {
+
+            this.names[x] = this.$fname(x);
+
+            let type = types[this.$ftype(x)];
+
+            if (type === undefined) {
+                this.types[x] = returnSameValue;
+            } else {
+                this.types[x] = type;
+            }
+        }
+    }
+
     private emitResult(): string {
         let status = this.$resultStatus();
         switch (status) {
@@ -479,6 +498,19 @@ export class PostgresClient extends Libpq {
                     this.count = false;
                     this.rows = +this.$cmdTuples() as any;
                 } else {
+                    if (this.fieldCount === -1) {
+
+                        this.getResultInfo();
+
+                        if (this.statementName !== '') {
+                            this.prepared[this.statementName] = {
+                                fieldCount: this.fieldCount,
+                                names: this.names,
+                                types: this.types
+                            };
+                        }
+                    }
+
                     this.consumeFields();
                 }
                 break;
@@ -530,11 +562,19 @@ export class PostgresClient extends Libpq {
         this.resolveCallback(this.rows);
     }
 
-
-
     private startReading() {
         if (this.isReading) return
         this.isReading = true
         this.$startRead()
     }
+}
+
+class ResultInfo {
+    public fieldCount!: number;
+    public names!: string[];
+    public types!: ((attr: any) => any)[];
+};
+
+function returnSameValue(value: any) {
+    return value;
 }

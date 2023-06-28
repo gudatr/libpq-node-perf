@@ -250,13 +250,8 @@ let typeParsers = require('pg-types');
 
 //Reduces the lookup time for the parser
 let typesFlat = [];
-for (let i = 0; i < 4097; i++) typesFlat[i] = undefined;
-
-for (let type in typeParsers.builtins) {
-    let parser = typeParsers.getTypeParser(type, 'text');
-    let parserId = typeParsers.builtins[type];
-
-    typesFlat[parserId] = parser;
+for (let i = 0; i < 4097; i++) {
+    typesFlat[i] = typeParsers.getTypeParser(i, 'text');
 }
 
 const types = typesFlat;

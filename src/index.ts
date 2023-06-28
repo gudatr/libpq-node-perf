@@ -37,6 +37,10 @@ export default class Postgres {
             this.connectionString = `postgresql://${config.user}@/${config.database}?host=${config.socket}`;
         }
 
+        if (!config.parseInt8AsString) {
+            types[20] = parseInt;
+        }
+
     }
 
     /**
@@ -236,7 +240,8 @@ export class ClientConfig {
         public threads: number = 10,
         public queueSize: number = 65535,
         public escapeChar: string = '\\',
-        public valuesOnly: boolean = false
+        public valuesOnly: boolean = false,
+        public parseInt8AsString: boolean = false,
     ) { }
 }
 
@@ -245,6 +250,7 @@ let typeParsers = require('pg-types');
 
 //Reduces the lookup time for the parser
 let typesFlat = [];
+for (let i = 0; i < 4097; i++) typesFlat[i] = undefined;
 
 for (let type in typeParsers.builtins) {
     let parser = typeParsers.getTypeParser(type, 'text');

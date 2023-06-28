@@ -67,7 +67,8 @@ let pool = new Postgres({
         threads: 10,
         queueSize: 200000,
         escapeChar: '\\',
-        valuesOnly: false
+        valuesOnly: false,
+        parseInt8AsString: false
 });
 
 await pool.initialize();
@@ -78,6 +79,8 @@ By default queries will return objects mapping column name to value. If you want
 If you do not want to or can use a unix socket, leave the socket parameter undefined.
 
 The queueSize defines the internal command queue of the pool.
+
+parseInt8AsString determines if a int8 should be parsed as a string so you can perform your own conversion since Number.MAX_SAFE_INTEGER is ~9 × 10^15 and the max value of pg's int8 is ~9 × 10^18 which would result in conversion problems.
 
 ### Prepared Query
 

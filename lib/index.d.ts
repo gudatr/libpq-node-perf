@@ -127,6 +127,7 @@ export declare class ClientConfig {
     constructor(user: string, host: string, port: number, database: string, schema: string, socket: string | undefined, password: string | undefined, threads?: number, queueSize?: number, escapeChar?: string, valuesOnly?: boolean, parseInt8AsString?: boolean);
 }
 declare let Libpq: any;
+export declare const types: any[];
 export declare class PostgresClient extends Libpq {
     private parentPool;
     private parse;

@@ -250,11 +250,17 @@ let typeParsers = require('pg-types');
 
 //Reduces the lookup time for the parser
 let typesFlat = [];
-for (let i = 0; i < 4097; i++) {
-    typesFlat[i] = typeParsers.getTypeParser(i, 'text');
+const returnValue = function (val: any) {
+    return val;
 }
 
-const types = typesFlat;
+for (let i = 0; i < 8192; i++) {
+    typesFlat[i] = typeParsers.getTypeParser(i, 'text');
+    if (typesFlat[i].name === 'noParse') typesFlat[i] = returnValue;
+}
+
+export const types = typesFlat;
+
 const NOTIFICATION = 'notification';
 
 export class PostgresClient extends Libpq {
@@ -477,16 +483,8 @@ export class PostgresClient extends Libpq {
         this.fieldCount = this.$nfields();
 
         for (let x = 0; x < this.fieldCount; x++) {
-
             this.names[x] = this.$fname(x);
-
-            let type = types[this.$ftype(x)];
-
-            if (type === undefined) {
-                this.types[x] = returnSameValue;
-            } else {
-                this.types[x] = type;
-            }
+            this.types[x] = types[this.$ftype(x)];
         }
     }
 

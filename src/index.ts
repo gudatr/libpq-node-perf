@@ -20,7 +20,10 @@ export default class Postgres {
     public constructor(private config: ClientConfig) {
 
         this.queue = [];
-        this._queueSize = config.queueSize ?? 200000;
+        this._queueSize = config.queueSize ?? 257590;
+
+        for (let i = 0; i < this._queueSize; i++) this.queue[i] = EMPTY_FUNCTION;
+
         this.escapeChar = config.escapeChar ?? '\\';
         this.escapedApostrophe = this.escapeChar + "'";
         this.escapeRegex = new RegExp(this.escapeChar.replace(/\\/g, '\\\\') + "|_|%", "gi");

@@ -1,5 +1,31 @@
 //Clear the queue using this value to free up used promises
 const EMPTY_FUNCTION = (_client: PostgresClient) => { };
+const IDENTIFIERS: string[] = [];
+
+let charOffset = "A".charCodeAt(0);
+for (let i = 0; i < 26; i++) {
+    let char = String.fromCharCode(i + charOffset);
+    IDENTIFIERS.push(char);
+    IDENTIFIERS.push(char.toLowerCase());
+}
+
+function radix52(value: number) {
+
+    if (value < 52) return IDENTIFIERS[value];
+
+    let resultArray = [];
+
+    while (value > 0) {
+        resultArray.push(value % 52);
+        value = Math.floor(value / 52);
+    }
+    let str = '';
+    for (let resultValue of resultArray) {
+        str += IDENTIFIERS[resultValue];
+    }
+
+    return str;
+}
 
 export default class Postgres {
     private connectionString: string;
@@ -178,7 +204,7 @@ export default class Postgres {
      * @returns string
      */
     public getPrepareIdentifier(): string {
-        return (this._prepareIndex++).toString(36);
+        return radix52(this._prepareIndex++);
     }
 
     /**

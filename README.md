@@ -87,7 +87,7 @@ parseInt8AsString determines if a int8 should be parsed as a string so you can p
 ```javascript
 let items: Item[] = await pool.query("get-player-items", "SELECT * FROM items WHERE player_id=$1", [player_id]);
 ```
-Note: You do not have to supply a parameter, an empty [] array will do then
+Note: You do not have to supply a parameter
 
 ### Simple String Query, no preparation
 

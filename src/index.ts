@@ -98,7 +98,7 @@ export default class Postgres {
      * @param values 
      * @returns 
      */
-    public async query(name: string, text: string, values: any[]) {
+    public async query(name: string, text: string, values: any[] = EMPTY_ARRAY) {
         let client = await this.connect();
         try {
             return await client.query(name, text, values);
@@ -128,7 +128,7 @@ export default class Postgres {
      * @param values 
      * @returns 
      */
-    public async queryCount(name: string, text: string, values: any[]) {
+    public async queryCount(name: string, text: string, values: any[] = EMPTY_ARRAY) {
         let client = await this.connect();
         try {
             return await client.queryCount(name, text, values);
@@ -266,6 +266,8 @@ export const types = typesFlat;
 
 const NOTIFICATION = 'notification';
 
+const EMPTY_ARRAY: any[] = [];
+
 export class PostgresClient extends Libpq {
     private parse: (arg: number) => any;
     private consumeFields: () => any;
@@ -291,7 +293,7 @@ export class PostgresClient extends Libpq {
      * @param values 
      * @returns 
      */
-    public query(queryName: string, text: string, values: any[]): Promise<any[]> {
+    public query(queryName: string, text: string, values: any[] = EMPTY_ARRAY): Promise<any[]> {
 
         let preparedInfo = this.prepared[queryName];
 
@@ -337,7 +339,7 @@ export class PostgresClient extends Libpq {
      * @param values 
      * @returns affected row count 
      */
-    public async queryCount(queryName: string, text: string, values: any[]): Promise<number> {
+    public async queryCount(queryName: string, text: string, values: any[] = EMPTY_ARRAY): Promise<number> {
         this.count = true;
         return await this.query(queryName, text, values) as any;
     }

@@ -39,7 +39,7 @@ export default class Postgres {
      * @param values
      * @returns
      */
-    query(name: string, text: string, values: any[]): Promise<any[]>;
+    query(name: string, text: string, values?: any[]): Promise<any[]>;
     /**
      * Query a string directly. Do not use it for transactions as it does pick the next available client for the query
      * @param query
@@ -53,7 +53,7 @@ export default class Postgres {
      * @param values
      * @returns
      */
-    queryCount(name: string, text: string, values: any[]): Promise<number>;
+    queryCount(name: string, text: string, values?: any[]): Promise<number>;
     /**
      * Query a string directly and return the affected row count
      * @param query
@@ -152,7 +152,7 @@ export declare class PostgresClient extends Libpq {
      * @param values
      * @returns
      */
-    query(queryName: string, text: string, values: any[]): Promise<any[]>;
+    query(queryName: string, text: string, values?: any[]): Promise<any[]>;
     /**
      * Query a string directly. Useful for starting transactions, etc.
      * @param query
@@ -166,7 +166,7 @@ export declare class PostgresClient extends Libpq {
      * @param values
      * @returns affected row count
      */
-    queryCount(queryName: string, text: string, values: any[]): Promise<number>;
+    queryCount(queryName: string, text: string, values?: any[]): Promise<number>;
     /**
      * Query a string directly and return the affected row count
      * @param query

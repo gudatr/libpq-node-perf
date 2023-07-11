@@ -536,11 +536,7 @@ export class PostgresClient extends Libpq {
                     this.getResultInfo();
 
                     if (this.statementName !== '') {
-                        this.prepared[this.statementName] = {
-                            fieldCount: this.fieldCount,
-                            names: this.names,
-                            types: this.types
-                        };
+                        this.prepared[this.statementName] = new ResultInfo(this.fieldCount, this.names, this.types);
                     }
                 }
 
@@ -603,11 +599,8 @@ export class PostgresClient extends Libpq {
 }
 
 class ResultInfo {
-    public fieldCount!: number;
-    public names!: string[];
-    public types!: ((attr: any) => any)[];
+    constructor(
+        public fieldCount: number,
+        public names: string[],
+        public types: ((attr: any) => any)[]) { }
 };
-
-function returnSameValue(value: any) {
-    return value;
-}

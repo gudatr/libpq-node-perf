@@ -141,7 +141,7 @@ export declare class PostgresClient extends Libpq {
     private names;
     private types;
     private rows;
-    private count;
+    private mode;
     private prepared;
     private namesNonPrepared;
     private typesNonPrepared;

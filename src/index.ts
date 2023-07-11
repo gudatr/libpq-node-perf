@@ -1,6 +1,7 @@
 //Clear the queue using this value to free up used promises
 const EMPTY_FUNCTION = (_client: PostgresClient) => { };
 const IDENTIFIERS: string[] = [];
+const NO_STATEMENT: string = '';
 
 let charOffset = "A".charCodeAt(0);
 for (let i = 0; i < 26; i++) {
@@ -306,7 +307,7 @@ export class PostgresClient extends Libpq {
     private names: string[] = [];
     private types: any[] = [];
     private rows: any[] = [];
-    private count: boolean = false;
+    private mode: 1 | 2 | 3 = 1;
     private prepared: { [Key: string]: ResultInfo } = {};
 
     private namesNonPrepared: string[] = [];
@@ -326,7 +327,7 @@ export class PostgresClient extends Libpq {
         if (preparedInfo === undefined) {
             return new Promise((resolve: (result: any[]) => void, reject) => {
                 this.prepareStatement(queryName, text, values.length, reject, () => {
-                    this.fieldCount = -1;
+                    this.mode = 2;
                     this.names = [];
                     this.types = [];
                     this.statementName = queryName;
@@ -336,6 +337,7 @@ export class PostgresClient extends Libpq {
         }
 
         return new Promise((resolve: (result: any[]) => void, reject) => {
+            this.mode = 3;
             this.fieldCount = preparedInfo.fieldCount;
             this.names = preparedInfo.names;
             this.types = preparedInfo.types;
@@ -350,10 +352,10 @@ export class PostgresClient extends Libpq {
      */
     public queryString(query: string): Promise<any[]> {
         return new Promise((resolve, reject) => {
-            this.fieldCount = -1;
+            this.mode = 2;
             this.names = this.namesNonPrepared;
             this.types = this.typesNonPrepared;
-            this.statementName = '';
+            this.statementName = NO_STATEMENT;
             this.internalQuery(query, reject, resolve);
         });
     }
@@ -366,7 +368,7 @@ export class PostgresClient extends Libpq {
      * @returns affected row count 
      */
     public async queryCount(queryName: string, text: string, values: any[] = EMPTY_ARRAY): Promise<number> {
-        this.count = true;
+        this.mode = 1;
         return await this.query(queryName, text, values) as any;
     }
 
@@ -376,7 +378,7 @@ export class PostgresClient extends Libpq {
      * @returns affected row count
      */
     public async queryStringCount(query: string): Promise<number> {
-        this.count = true;
+        this.mode = 1;
         return await this.queryString(query) as any;
     }
 
@@ -525,23 +527,19 @@ export class PostgresClient extends Libpq {
             case 'PGRES_TUPLES_OK':
             case 'PGRES_COMMAND_OK':
             case 'PGRES_EMPTY_QUERY':
-                if (this.count) {
-                    this.count = false;
-                    this.rows = +this.$cmdTuples() as any;
-                    break;
+                switch (this.mode) {
+                    case 1: //Count
+                        this.rows = +this.$cmdTuples() as any;
+                        break;
+                    case 2: //Loading types and column names
+                        this.getResultInfo();
+
+                        if (this.statementName !== NO_STATEMENT) {
+                            this.prepared[this.statementName] = new ResultInfo(this.fieldCount, this.names, this.types);
+                        }
+                    default:
+                        this.consumeFields();
                 }
-
-                if (this.fieldCount === -1) {
-
-                    this.getResultInfo();
-
-                    if (this.statementName !== '') {
-                        this.prepared[this.statementName] = new ResultInfo(this.fieldCount, this.names, this.types);
-                    }
-                }
-
-                this.consumeFields();
-
                 break;
             case 'PGRES_FATAL_ERROR':
                 this.error = new Error(this.$resultErrorMessage());
